@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Loopapp — Menú digital · 6 themes</title>
+<style>
+  /* ===== Themes (6) ===== */
+  :root{
+    --bg1:#15110a; --bg2:#241a0d; --screen:#15110a; --card:#221c12; --cardb:#3a2f1c;
+    --title:#f5e9cf; --text:#f5e9cf; --sub:#b09a72; --accent:#d4af37; --header:#d4af37;
+    --ph1:#3a2f1c; --ph2:#5a4a26; --font:Georgia, 'Times New Roman', serif;
+  }
+  [data-theme="claro"]{--bg1:#ffffff;--bg2:#f3f4f6;--screen:#fafafa;--card:#ffffff;--cardb:#e6e7eb;--title:#111827;--text:#111827;--sub:#9ca3af;--accent:#111827;--header:#111827;--ph1:#eef2ff;--ph2:#e0e7ff;--font:'Helvetica Neue',Arial,sans-serif;}
+  [data-theme="madera"]{--bg1:#2b1d12;--bg2:#3d2a18;--screen:#2b1d12;--card:#3a2719;--cardb:#5a3d24;--title:#f6e7d3;--text:#f6e7d3;--sub:#c7a583;--accent:#e0852f;--header:#e0852f;--ph1:#5a3d24;--ph2:#7a5230;--font:Georgia,serif;}
+  [data-theme="neon"]{--bg1:#0a0a18;--bg2:#160a2a;--screen:#0a0a18;--card:#160f2e;--cardb:#2c1f55;--title:#f0e9ff;--text:#f0e9ff;--sub:#9d8bd0;--accent:#ff3da6;--header:#22d3ee;--ph1:#2c1f55;--ph2:#5a2c8a;--font:'Helvetica Neue',Arial,sans-serif;}
+  [data-theme="pastel"]{--bg1:#fdf2f4;--bg2:#fce7eb;--screen:#fdf6f7;--card:#ffffff;--cardb:#f3d9df;--title:#5b3a44;--text:#5b3a44;--sub:#b08a94;--accent:#e8738f;--header:#e8738f;--ph1:#fce7eb;--ph2:#fbd3dd;--font:'Helvetica Neue',Arial,sans-serif;}
+  [data-theme="bistro"]{--bg1:#f5efe2;--bg2:#ece2cd;--screen:#f5efe2;--card:#fbf7ee;--cardb:#ddd0b4;--title:#2f2a20;--text:#2f2a20;--sub:#8a7d64;--accent:#9a3b2e;--header:#9a3b2e;--ph1:#ece2cd;--ph2:#d8c9a8;--font:Georgia,serif;}
+
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:#0c0d14;color:#e7e9f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    min-height:100vh;padding:18px 12px 60px;display:flex;flex-direction:column;align-items:center;}
+
+  h1{font-size:18px;margin-bottom:4px;text-align:center;}
+  .hint{font-size:12.5px;color:#8b8fb0;text-align:center;margin-bottom:16px;}
+
+  /* selector de themes */
+  .themes{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:440px;margin-bottom:22px;}
+  .themes button{background:#191b2b;border:1px solid #2c2f47;color:#cfd2ea;padding:8px 13px;border-radius:999px;
+    font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:7px;}
+  .themes button.active{border-color:#6366f1;background:#23284a;color:#fff;}
+  .themes button .sw{width:13px;height:13px;border-radius:50%;border:1px solid rgba(255,255,255,.25);}
+
+  /* marco de celular */
+  .phone{width:390px;max-width:94vw;height:780px;border-radius:42px;overflow:hidden;position:relative;
+    background:linear-gradient(180deg,var(--bg1),var(--bg2));box-shadow:0 30px 70px rgba(0,0,0,.55);
+    border:2px solid rgba(0,0,0,.35);transition:.3s;}
+  .notch{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:96px;height:20px;border-radius:11px;
+    background:var(--screen);opacity:.5;}
+  .scroll{position:absolute;inset:0;overflow-y:auto;padding:54px 20px 20px;}
+  .scroll::-webkit-scrollbar{width:0;}
+
+  .brand{text-align:center;margin-bottom:16px;}
+  .brand .name{font-family:var(--font);font-size:26px;font-weight:800;color:var(--header);letter-spacing:1px;}
+  .brand .tag{font-family:var(--font);font-size:11.5px;color:var(--sub);letter-spacing:2px;text-transform:uppercase;margin-top:2px;}
+  .brand .rule{width:56px;height:2px;background:var(--accent);margin:9px auto 0;}
+
+  /* casillas desplegables */
+  .section{background:var(--card);border:1px solid var(--cardb);border-radius:16px;margin-bottom:12px;overflow:hidden;}
+  .section.open{border-color:var(--accent);}
+  .sec-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;cursor:pointer;
+    font-family:var(--font);}
+  .section.open .sec-head{background:var(--accent);}
+  .sec-head .t{font-size:16px;font-weight:700;color:var(--title);}
+  .section.open .sec-head .t{color:var(--screen);}
+  .sec-head .r{display:flex;align-items:center;gap:10px;}
+  .sec-head .count{font-size:12px;color:var(--sub);}
+  .section.open .sec-head .count{color:var(--screen);opacity:.8;}
+  .chev{width:11px;height:11px;border-right:2.4px solid var(--sub);border-bottom:2.4px solid var(--sub);
+    transform:rotate(45deg);transition:.25s;}
+  .section.open .chev{border-color:var(--screen);transform:rotate(225deg);}
+
+  .sec-body{max-height:0;overflow:hidden;transition:max-height .3s ease;}
+  .section.open .sec-body{max-height:900px;}
+  .sec-inner{padding:8px;}
+
+  .item{display:flex;gap:12px;background:transparent;border-radius:14px;padding:10px;align-items:center;}
+  .item + .item{border-top:1px solid var(--cardb);}
+  .item .photo{width:62px;height:62px;border-radius:12px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+    font-size:26px;background:linear-gradient(135deg,var(--ph1),var(--ph2));}
+  .item .info{flex:1;font-family:var(--font);}
+  .item .info .n{font-size:15px;font-weight:700;color:var(--text);}
+  .item .info .d{font-size:11.5px;color:var(--sub);margin-top:3px;line-height:1.35;}
+  .item .price{font-family:var(--font);font-size:12.5px;font-weight:700;color:var(--screen);background:var(--accent);
+    padding:5px 11px;border-radius:11px;align-self:flex-start;}
+
+  .footer{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--cardb);
+    border-radius:16px;padding:12px;margin-top:6px;}
+  .footer .qr{width:38px;height:38px;border-radius:8px;background:var(--title);flex:0 0 auto;
+    background-image:repeating-linear-gradient(90deg,var(--title) 0 3px, var(--card) 3px 6px),repeating-linear-gradient(0deg,var(--title) 0 3px, var(--card) 3px 6px);}
+  .footer .ft{font-family:var(--font);}
+  .footer .ft .a{font-size:12.5px;font-weight:700;color:var(--title);}
+  .footer .ft .b{font-size:11px;color:var(--sub);margin-top:2px;}
+</style>
+</head>
+<body>
+  <h1>🧾 Loopapp — Menú digital (casillas desplegables)</h1>
+  <p class="hint">Toca una sección para desplegarla · cambia el theme abajo · este es el prototipo real del módulo</p>
+
+  <div class="themes" id="themes"></div>
+
+  <div class="phone" id="phone" data-theme="oscuro">
+    <div class="notch"></div>
+    <div class="scroll">
+      <div class="brand">
+        <div class="name" id="brand-name">LA BODEGA</div>
+        <div class="tag" id="brand-tag">Bar &amp; Cocina</div>
+        <div class="rule"></div>
+      </div>
+      <div id="menu"></div>
+      <div class="footer">
+        <div class="qr"></div>
+        <div class="ft">
+          <div class="a">Menú digital</div>
+          <div class="b">escanea el QR para verlo en tu mesa</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const THEMES = [
+    {id:'oscuro', name:'Oscuro Elegante', sw:'#d4af37', brand:'LA BODEGA', tag:'Bar & Cocina'},
+    {id:'claro',  name:'Claro Minimal',   sw:'#111827', brand:'NORDIC',    tag:'café & bar'},
+    {id:'madera', name:'Madera / Rústico',sw:'#e0852f', brand:'EL ROBLE',  tag:'parrilla & tragos'},
+    {id:'neon',   name:'Neón Nocturno',   sw:'#ff3da6', brand:'NEÓN',      tag:'cocktail club'},
+    {id:'pastel', name:'Pastel / Cozy',   sw:'#e8738f', brand:'Dulce',     tag:'brunch & vino'},
+    {id:'bistro', name:'Clásico Bistró',  sw:'#9a3b2e', brand:'BISTRÓ 1921', tag:'cuisine maison'},
+  ];
+
+  const MENU = [
+    {t:'Entradas', items:[
+      {e:'🥗', n:'Ensalada de la casa', d:'mix verde, queso de cabra y nueces', p:'$9'},
+      {e:'🧀', n:'Tabla de quesos', d:'selección de 4 quesos y mermelada', p:'$13'},
+    ]},
+    {t:'Platos fuertes', open:true, items:[
+      {e:'🥩', n:'Bife de chorizo', d:'300g, punto a elección, con guarnición', p:'$18'},
+      {e:'🍝', n:'Pasta de la casa', d:'salsa pomodoro y albahaca fresca', p:'$14'},
+      {e:'🍔', n:'Burger Loop', d:'doble carne, cheddar y papas rústicas', p:'$12'},
+    ]},
+    {t:'Bebidas', items:[
+      {e:'🍷', n:'Copa de vino', d:'tinto / blanco de la casa', p:'$6'},
+      {e:'🍸', n:'Cóctel de autor', d:'pregunta por el del día', p:'$8'},
+      {e:'🍺', n:'Cerveza artesanal', d:'rubia, roja o negra', p:'$5'},
+    ]},
+    {t:'Postres', items:[
+      {e:'🍰', n:'Cheesecake', d:'con coulis de frutos rojos', p:'$6'},
+      {e:'🍫', n:'Volcán de chocolate', d:'con helado de vainilla', p:'$7'},
+    ]},
+  ];
+
+  // render selector de themes
+  const themesEl = document.getElementById('themes');
+  THEMES.forEach((th,i)=>{
+    const b=document.createElement('button');
+    b.innerHTML=`<span class="sw" style="background:${th.sw}"></span>${i+1}. ${th.name}`;
+    b.onclick=()=>setTheme(th.id, b);
+    b.dataset.id=th.id;
+    if(i===0) b.classList.add('active');
+    themesEl.appendChild(b);
+  });
+
+  function setTheme(id, btn){
+    document.getElementById('phone').dataset.theme=id;
+    document.querySelectorAll('.themes button').forEach(x=>x.classList.remove('active'));
+    btn.classList.add('active');
+    const th=THEMES.find(t=>t.id===id);
+    document.getElementById('brand-name').textContent=th.brand;
+    document.getElementById('brand-tag').textContent=th.tag;
+  }
+
+  // render menú
+  const menuEl=document.getElementById('menu');
+  MENU.forEach(sec=>{
+    const wrap=document.createElement('div');
+    wrap.className='section'+(sec.open?' open':'');
+    wrap.innerHTML=`
+      <div class="sec-head">
+        <span class="t">${sec.t}</span>
+        <span class="r"><span class="count">${sec.items.length} ítems</span><span class="chev"></span></span>
+      </div>
+      <div class="sec-body"><div class="sec-inner">
+        ${sec.items.map(it=>`
+          <div class="item">
+            <div class="photo">${it.e}</div>
+            <div class="info"><div class="n">${it.n}</div><div class="d">${it.d}</div></div>
+            <div class="price">${it.p}</div>
+          </div>`).join('')}
+      </div></div>`;
+    wrap.querySelector('.sec-head').onclick=()=>wrap.classList.toggle('open');
+    menuEl.appendChild(wrap);
+  });
+</script>
+</body>
+</html>
