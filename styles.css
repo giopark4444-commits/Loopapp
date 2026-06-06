@@ -65,6 +65,7 @@ body {
   padding: 11px 12px; border-radius: 10px; text-decoration: none; }
 .dropdown-item:hover { background: var(--card-hover); }
 .dropdown-item.danger { color: var(--overdue); }
+.dropdown-sep { height: 1px; background: var(--border); margin: 5px 6px; }
 
 /* ---------- Resumen ---------- */
 .summary-bar { display: flex; gap: 8px; margin-top: 16px; overflow-x: auto; padding-bottom: 4px; }
@@ -107,6 +108,7 @@ main { margin-top: 18px; }
 .loop-card .title { font-size: 15px; font-weight: 700; margin-top: 12px; line-height: 1.25; }
 .loop-card .countdown { margin-top: 8px; display: flex; align-items: baseline; gap: 6px; }
 .loop-card .count-num { font-size: 30px; font-weight: 800; letter-spacing: -1px; color: var(--state-color); }
+.loop-card .count-num.sm { font-size: 21px; letter-spacing: -0.5px; }
 .loop-card .count-label { font-size: 12.5px; color: var(--text-dim); }
 .loop-card .meta { margin-top: 12px; display: flex; align-items: center; justify-content: space-between; }
 .loop-card .amount { font-size: 14px; font-weight: 700; }
@@ -196,6 +198,15 @@ main { margin-top: 18px; }
 .btn-ghost { background: var(--card); border: 1px solid var(--border); color: var(--text); }
 .btn-danger { background: transparent; border: 1px solid var(--overdue); color: var(--overdue); }
 .btn:hover { filter: brightness(1.1); }
+
+/* ---------- Animaciones ---------- */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+.cards-grid .loop-card { animation: fadeUp 0.25s ease both; }
+.sub-row { animation: fadeUp 0.2s ease both; }
+.dropdown { animation: fadeUp 0.14s ease both; }
+@media (prefers-reduced-motion: reduce) {
+  .cards-grid .loop-card, .sub-row, .dropdown { animation: none; }
+}
 
 /* scrollbars */
 ::-webkit-scrollbar { height: 6px; width: 6px; }

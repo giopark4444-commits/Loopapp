@@ -96,9 +96,20 @@ function statusOf(loop) {
 
 function countdownText(loop) {
   const dl = daysUntil(loop.nextDate);
-  if (dl < 0)  return { num: Math.abs(dl), label: `día${Math.abs(dl)===1?'':'s'} vencido` };
-  if (dl === 0) return { num: 'HOY', label: 'vence hoy' };
-  if (dl === 1) return { num: 1, label: 'día — mañana' };
+  if (dl < 0) return { num: Math.abs(dl), label: `día${Math.abs(dl)===1?'':'s'} vencido` };
+  if (dl === 0) {
+    // Cuenta regresiva real: horas y minutos hasta el fin del día
+    const endOfDay = todayMid(); endOfDay.setDate(endOfDay.getDate() + 1);
+    const ms = endOfDay.getTime() - Date.now();
+    const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000);
+    return { num: `${h}h ${m}m`, label: 'vence hoy', sm: true };
+  }
+  if (dl === 1) {
+    // Tiempo real que falta hasta mañana (24–48 h)
+    const ms = parseDate(loop.nextDate).getTime() - Date.now();
+    const h = Math.floor((ms % 86400000) / 3600000);
+    return { num: `1d ${h}h`, label: 'para mañana', sm: true };
+  }
   return { num: dl, label: 'días restantes' };
 }
 
@@ -114,6 +125,17 @@ function nextCycle(dateStr, recurrence) {
     else return null; // 'none' -> no se repite
   } while (d <= today);
   return fmtDate(d);
+}
+
+/* ¿El loop ocurre en esta fecha? (considera la recurrencia) */
+function occursOn(loop, date) {
+  const anchor = parseDate(loop.nextDate);
+  switch (loop.recurrence) {
+    case 'weekly':  return date.getDay() === anchor.getDay();
+    case 'monthly': return date.getDate() === anchor.getDate();
+    case 'yearly':  return date.getMonth() === anchor.getMonth() && date.getDate() === anchor.getDate();
+    default:        return fmtDate(date) === loop.nextDate; // 'none'
+  }
 }
 
 /* Costo mensual normalizado (solo loops con monto) */
@@ -255,7 +277,7 @@ function cardHTML(loop) {
       </div>
       <div class="title">${escapeHtml(loop.title)}</div>
       <div class="countdown">
-        <span class="count-num">${cd.num}</span>
+        <span class="count-num${cd.sm ? ' sm' : ''}">${cd.num}</span>
         <span class="count-label">${cd.label}</span>
       </div>
       <div class="meta">
@@ -324,17 +346,15 @@ function renderCalendar(main) {
   const days = new Date(year, month + 1, 0).getDate();
   const todayStr = fmtDate(todayMid());
 
-  // Mapa fecha -> loops (considera fecha base; las recurrentes se muestran en su próxima fecha)
-  const byDate = {};
-  loops.forEach(l => { (byDate[l.nextDate] = byDate[l.nextDate] || []).push(l); });
-
   let cells = '';
   const dows = ['L','M','X','J','V','S','D'];
   dows.forEach(d => cells += `<div class="cal-dow">${d}</div>`);
   for (let i = 0; i < firstDow; i++) cells += `<div class="cal-cell empty"></div>`;
   for (let day = 1; day <= days; day++) {
-    const ds = fmtDate(new Date(year, month, day));
-    const items = byDate[ds] || [];
+    const date = new Date(year, month, day);
+    const ds = fmtDate(date);
+    // Considera la recurrencia: muestra cada Loop en todas sus fechas del mes
+    const items = loops.filter(l => occursOn(l, date));
     const dots = items.slice(0, 5).map(l =>
       `<span class="d" style="background:${STATES[statusOf(l)].color}" title="${escapeHtml(l.title)}"></span>`).join('');
     cells += `<div class="cal-cell ${ds===todayStr?'today':''}">
@@ -500,13 +520,86 @@ document.getElementById('reset-data').onclick = () => {
   }
 };
 
+document.getElementById('about-app').onclick = () => {
+  closeMenu();
+  alert('Loopapp — Todo lo que se repite, a la vista.\n\n' +
+        'Lleva el control de suscripciones, pagos, rutinas y recados con cuenta ' +
+        'regresiva, semáforo de estados y avisos.\n\nTus datos se guardan en este dispositivo.');
+};
+
 document.querySelectorAll('#view-switch button').forEach(b =>
   b.onclick = () => { activeView = b.dataset.view; render(); });
+
+/* ============================================================
+   Avisos (notificaciones locales del navegador)
+   ============================================================ */
+const NOTIFY_SENT_KEY = 'loopapp.notify.sent.v1';
+function notifyEnabled() { return 'Notification' in window && Notification.permission === 'granted'; }
+
+document.getElementById('enable-notify').onclick = async () => {
+  closeMenu();
+  if (!('Notification' in window)) { alert('Tu navegador no soporta notificaciones.'); return; }
+  let perm = Notification.permission;
+  if (perm !== 'granted') perm = await Notification.requestPermission();
+  if (perm === 'granted') { alert('Avisos activados 🔔\nTe avisaremos cuando algo esté por vencer (con la app abierta).'); checkDue(); }
+  else alert('No se activaron los avisos. Puedes habilitarlos en los permisos del navegador.');
+};
+
+function checkDue() {
+  if (!notifyEnabled()) return;
+  let sent = {};
+  try { sent = JSON.parse(localStorage.getItem(NOTIFY_SENT_KEY)) || {}; } catch (e) {}
+  const today = fmtDate(todayMid());
+  loops.forEach(l => {
+    const st = statusOf(l);
+    if (st === 'overdue' || st === 'urgent' || st === 'upcoming') {
+      const key = `${l.id}@${today}`;
+      if (!sent[key]) {
+        const body = st === 'overdue'
+          ? '¡Vencido! Tócalo para revisarlo.'
+          : `Próximo a vencer (${l.nextDate}).`;
+        try { new Notification(`Loopapp · ${l.title}`, { body, icon: 'icon.svg', tag: l.id }); } catch (e) {}
+        sent[key] = true;
+      }
+    }
+  });
+  localStorage.setItem(NOTIFY_SENT_KEY, JSON.stringify(sent));
+}
+
+/* ============================================================
+   Instalar como app (PWA)
+   ============================================================ */
+let deferredPrompt = null;
+const installBtn = document.getElementById('install-app');
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  installBtn.hidden = false;
+});
+installBtn.onclick = async () => {
+  closeMenu();
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  installBtn.hidden = true;
+};
 
 /* Service worker (modo offline / instalable) */
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 
-/* Arranque */
+/* ============================================================
+   Arranque + refresco en vivo de cuentas regresivas / avisos
+   ============================================================ */
 render();
+checkDue();
+// Cada minuto: actualiza las cuentas regresivas en vivo y revisa vencimientos
+setInterval(() => {
+  if (document.getElementById('modal-overlay').hidden) {
+    renderSummary();
+    if (activeView === 'board') renderView();
+  }
+  checkDue();
+}, 60000);
