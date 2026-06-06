@@ -66,6 +66,9 @@ function seed() {
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// Seguridad: solo aceptar imágenes data:image/… (evita inyección por atributo/CSS)
+const safeImg = p => (typeof p === 'string' && /^data:image\//.test(p) && !/["'<>]/.test(p)) ? p : '';
+const safeColor = c => (typeof c === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(c)) ? c : '';
 let savedTimer;
 function flashSaved() {
   const n = $('#saved-note'); if (!n) return;
@@ -208,8 +211,8 @@ function buildAdmin() {
 }
 
 function itemEditorHTML(it) {
-  const thumb = it.photo
-    ? `<img src="${it.photo}" alt="" />`
+  const thumb = safeImg(it.photo)
+    ? `<img src="${safeImg(it.photo)}" alt="" />`
     : esc(it.emoji || '🍽️');
   return `
     <div class="itm" data-iid="${it.id}">
@@ -278,7 +281,7 @@ function secPreviewHTML(sec) {
       <div class="m-body"><div class="m-inner">
         ${sec.items.map(it => `
           <div class="m-itm">
-            <div class="ph">${it.photo ? `<img src="${it.photo}" alt="">` : esc(it.emoji || '🍽️')}</div>
+            <div class="ph">${safeImg(it.photo) ? `<img src="${safeImg(it.photo)}" alt="">` : esc(it.emoji || '🍽️')}</div>
             <div class="info">
               <div class="n">${esc(it.name) || 'Ítem'}</div>
               ${it.desc ? `<div class="d">${esc(it.desc)}</div>` : ''}
@@ -291,9 +294,10 @@ function secPreviewHTML(sec) {
 
 function applyBackground() {
   const phone = $('#phone');
-  if (data.bgType === 'color') phone.style.background = data.bgColor;
-  else if (data.bgType === 'image' && data.bgImage)
-    phone.style.background = `center/cover no-repeat url(${data.bgImage})`;
+  const img = safeImg(data.bgImage), col = safeColor(data.bgColor);
+  if (data.bgType === 'color' && col) phone.style.background = col;
+  else if (data.bgType === 'image' && img)
+    phone.style.background = `center/cover no-repeat url("${img}")`;
   else phone.style.background = 'linear-gradient(180deg, var(--bg1), var(--bg2))';
 }
 

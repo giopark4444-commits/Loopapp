@@ -8,6 +8,9 @@ const wrap = document.getElementById('wrap');
 const menuEl = document.getElementById('menu');
 
 const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+// Seguridad: solo aceptar imágenes data:image/… (evita inyección por src/atributo)
+const safeImg = p => (typeof p === 'string' && /^data:image\//.test(p) && !/["'<>]/.test(p)) ? p : '';
+const safeColor = c => (typeof c === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(c)) ? c : '';
 
 async function loadMenu() {
   if (!slug) { menuEl.innerHTML = `<div class="msg">Falta el identificador del menú en el enlace.</div>`; return; }
@@ -26,8 +29,9 @@ async function loadMenu() {
 }
 
 function applyBackground(d) {
-  if (d.bgType === 'color' && d.bgColor) wrap.style.background = d.bgColor;
-  else if (d.bgType === 'image' && d.bgImage) wrap.style.background = `center/cover no-repeat fixed url(${d.bgImage})`;
+  const img = safeImg(d.bgImage), col = safeColor(d.bgColor);
+  if (d.bgType === 'color' && col) wrap.style.background = col;
+  else if (d.bgType === 'image' && img) wrap.style.background = `center/cover no-repeat fixed url("${img}")`;
   else wrap.style.background = 'linear-gradient(180deg, var(--bg1), var(--bg2))';
 }
 
@@ -62,7 +66,7 @@ function secHTML(sec) {
       <div class="m-body"><div class="m-inner">
         ${items.map(it => `
           <div class="m-itm">
-            <div class="ph">${it.photo ? `<img src="${it.photo}" alt="">` : esc(it.emoji || '🍽️')}</div>
+            <div class="ph">${safeImg(it.photo) ? `<img src="${safeImg(it.photo)}" alt="">` : esc(it.emoji || '🍽️')}</div>
             <div class="info">
               <div class="n">${esc(it.name) || 'Ítem'}</div>
               ${it.desc ? `<div class="d">${esc(it.desc)}</div>` : ''}

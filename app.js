@@ -284,7 +284,7 @@ function cardHTML(loop) {
   return `
     <div class="loop-card" data-id="${loop.id}" style="--state-color:${s.color}">
       <div class="card-head">
-        <span class="card-icon">${loop.icon || cat.icon}</span>
+        <span class="card-icon">${escapeHtml(loop.icon || cat.icon)}</span>
         <span class="state-badge">${s.icon} ${s.label}</span>
       </div>
       <div class="title">${escapeHtml(loop.title)}</div>
@@ -322,7 +322,7 @@ function renderSubs(main) {
       const when = dl < 0 ? `vencido hace ${Math.abs(dl)}d` : dl === 0 ? 'vence hoy' : dl === 1 ? 'mañana' : `en ${dl} días`;
       return `
         <div class="sub-row" data-id="${l.id}" style="--state-color:${s.color}">
-          <span class="ic">${l.icon || '💳'}</span>
+          <span class="ic">${escapeHtml(l.icon || '💳')}</span>
           <div class="info">
             <div class="n">${escapeHtml(l.title)}</div>
             <div class="d">${RECURRENCE[l.recurrence].label} · ${money(monthlyCost(l))}/mes</div>
