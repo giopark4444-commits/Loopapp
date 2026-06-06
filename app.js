@@ -5,13 +5,70 @@
 
 const STORE_KEY = 'loopapp.loops.v1';
 
+/* ============================================================
+   Iconos SVG monocromáticos (estilo línea, un solo color)
+   ============================================================ */
+const ICON = {
+  menu: '<line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>',
+  plus: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+  repeat: '<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
+  grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+  'credit-card': '<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>',
+  calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+  home: '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+  wallet: '<path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>',
+  'shopping-bag': '<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+  utensils: '<path d="M3 2v7c0 1.1.9 2 2 2a2 2 0 0 0 2-2V2"/><line x1="7" y1="2" x2="7" y2="22"/><path d="M21 15V2a5 4 0 0 0-3 4v6c0 1.1.9 2 2 2h1z"/><line x1="21" y1="15" x2="21" y2="22"/>',
+  bell: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+  smartphone: '<rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+  upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
+  info: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>',
+  rotate: '<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>',
+  'alert-triangle': '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  'alert-circle': '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
+  clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  check: '<polyline points="20 6 9 17 4 12"/>',
+  circle: '<circle cx="12" cy="12" r="9"/>',
+  star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  search: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+  'chevron-left': '<polyline points="15 18 9 12 15 6"/>',
+  'chevron-right': '<polyline points="9 18 15 12 9 6"/>',
+  tv: '<rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/>',
+  music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+  cloud: '<path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>',
+  globe: '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
+  zap: '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+  droplet: '<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>',
+  flame: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
+  car: '<path d="M5 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0z"/><path d="M15 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0z"/><path d="M5 17H3v-5l2-5h9l4 5h2a1 1 0 0 1 1 1v4h-2"/><line x1="9" y1="17" x2="15" y2="17"/>',
+  shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  dumbbell: '<path d="M6 7v10"/><path d="M18 7v10"/><line x1="6" y1="12" x2="18" y2="12"/><path d="M3 9v6"/><path d="M21 9v6"/>',
+  pill: '<path d="M10.5 20.5L3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><line x1="8.5" y1="8.5" x2="15.5" y2="15.5"/>',
+  leaf: '<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/>',
+  heart: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7z"/>',
+  book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+  gift: '<polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>',
+  plane: '<path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 5.3 3.5c.4.3.8.2 1.3 0l.5-.3c.4-.2.6-.6.5-1z"/>',
+  trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+};
+function svg(name) {
+  const inner = ICON[name];
+  if (inner == null) return '';
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
+}
+/* Renderiza un icono por clave; si es un emoji antiguo/importado, lo muestra tal cual */
+function renderIcon(name) {
+  return ICON[name] ? svg(name) : `<span class="emoji-ico">${escapeHtml(String(name || ''))}</span>`;
+}
+
 /* ---------- Categorías ---------- */
 const CATEGORIES = {
-  subs:     { label: 'Suscripciones', icon: '💳', color: '#a855f7' },
-  money:    { label: 'Alquiler / Servicios', icon: '💰', color: '#22c55e' },
-  routine:  { label: 'Rutinas', icon: '🔁', color: '#38bdf8' },
-  home:     { label: 'Hogar', icon: '🏠', color: '#f59e0b' },
-  shopping: { label: 'Compras', icon: '🛒', color: '#ec4899' },
+  subs:     { label: 'Suscripciones', icon: 'credit-card', color: '#8a6fb0' },
+  money:    { label: 'Alquiler / Servicios', icon: 'wallet', color: '#5d8a55' },
+  routine:  { label: 'Rutinas', icon: 'repeat', color: '#5e7f9c' },
+  home:     { label: 'Hogar', icon: 'home', color: '#c5703a' },
+  shopping: { label: 'Compras', icon: 'shopping-bag', color: '#b06a8a' },
 };
 
 /* ---------- Recurrencia ---------- */
@@ -24,14 +81,14 @@ const RECURRENCE = {
 
 /* ---------- Estados (semáforo) ---------- */
 const STATES = {
-  overdue:  { label: 'Vencido',  color: '#ef4444', icon: '⚠️', order: 0 },
-  urgent:   { label: 'Urgente',  color: '#f97316', icon: '❗', order: 1 },
-  upcoming: { label: 'Próximo',  color: '#eab308', icon: '⏳', order: 2 },
-  ok:       { label: 'Al día',   color: '#22c55e', icon: '✓',  order: 3 },
-  neutral:  { label: 'Pendiente',color: '#38bdf8', icon: '•',  order: 4 },
+  overdue:  { label: 'Vencido',  color: '#b3392b', icon: 'alert-triangle', order: 0 },
+  urgent:   { label: 'Urgente',  color: '#c5703a', icon: 'alert-circle',   order: 1 },
+  upcoming: { label: 'Próximo',  color: '#b08a2e', icon: 'clock',          order: 2 },
+  ok:       { label: 'Al día',   color: '#5d8a55', icon: 'check',          order: 3 },
+  neutral:  { label: 'Pendiente',color: '#5e7f9c', icon: 'circle',         order: 4 },
 };
 
-const ICONS = ['💳','📺','🎵','🎮','☁️','📱','💡','💧','🔥','🌐','🏠','🚗','🛡️','🏋️','💊','🌱','🧹','🐶','📚','🎁','🍽️','✈️'];
+const ICONS = ['credit-card','tv','music','cloud','smartphone','globe','zap','droplet','flame','home','car','shield','dumbbell','pill','leaf','heart','book','gift','utensils','plane','trash','wallet'];
 
 /* ============================================================
    Estado de la app
@@ -55,17 +112,17 @@ function save() { localStorage.setItem(STORE_KEY, JSON.stringify(loops)); schedu
 function seed() {
   const d = offsetDate;
   return [
-    { id: uid(), title: 'Netflix',        category: 'subs',    icon: '📺', amount: 15.99, currency: 'USD', recurrence: 'monthly', nextDate: d(3),   notifyDaysBefore: 5, notes: '' },
-    { id: uid(), title: 'Spotify',        category: 'subs',    icon: '🎵', amount: 11.99, currency: 'USD', recurrence: 'monthly', nextDate: d(12),  notifyDaysBefore: 5, notes: '' },
-    { id: uid(), title: 'iCloud+',        category: 'subs',    icon: '☁️', amount: 2.99,  currency: 'USD', recurrence: 'monthly', nextDate: d(-1),  notifyDaysBefore: 3, notes: '' },
-    { id: uid(), title: 'Dominio web',    category: 'subs',    icon: '🌐', amount: 12.00, currency: 'USD', recurrence: 'yearly',  nextDate: d(40),  notifyDaysBefore: 14, notes: '' },
-    { id: uid(), title: 'Alquiler',       category: 'money',   icon: '🏠', amount: 800,   currency: 'USD', recurrence: 'monthly', nextDate: d(8),   notifyDaysBefore: 5, notes: '' },
-    { id: uid(), title: 'Internet',       category: 'money',   icon: '🌐', amount: 45,    currency: 'USD', recurrence: 'monthly', nextDate: d(1),   notifyDaysBefore: 3, notes: '' },
-    { id: uid(), title: 'Seguro auto',    category: 'money',   icon: '🛡️', amount: 90,    currency: 'USD', recurrence: 'monthly', nextDate: d(-2),  notifyDaysBefore: 4, notes: '' },
-    { id: uid(), title: 'Gimnasio',       category: 'routine', icon: '🏋️', amount: 30,    currency: 'USD', recurrence: 'monthly', nextDate: d(6),   notifyDaysBefore: 3, notes: '3 veces/semana' },
-    { id: uid(), title: 'Regar plantas',  category: 'home',    icon: '🌱', amount: null,  currency: 'USD', recurrence: 'weekly',  nextDate: d(2),   notifyDaysBefore: 1, notes: '' },
-    { id: uid(), title: 'Cambiar filtro A/C', category: 'home', icon: '🧹', amount: null, currency: 'USD', recurrence: 'yearly',  nextDate: d(60),  notifyDaysBefore: 14, notes: '' },
-    { id: uid(), title: 'Comprar regalo', category: 'shopping',icon: '🎁', amount: null,  currency: 'USD', recurrence: 'none',    nextDate: d(5),   notifyDaysBefore: 2, notes: '' },
+    { id: uid(), title: 'Netflix',        category: 'subs',    icon: 'tv',     amount: 15.99, currency: 'USD', recurrence: 'monthly', nextDate: d(3),   notifyDaysBefore: 5, notes: '' },
+    { id: uid(), title: 'Spotify',        category: 'subs',    icon: 'music',  amount: 11.99, currency: 'USD', recurrence: 'monthly', nextDate: d(12),  notifyDaysBefore: 5, notes: '' },
+    { id: uid(), title: 'iCloud+',        category: 'subs',    icon: 'cloud',  amount: 2.99,  currency: 'USD', recurrence: 'monthly', nextDate: d(-1),  notifyDaysBefore: 3, notes: '' },
+    { id: uid(), title: 'Dominio web',    category: 'subs',    icon: 'globe',  amount: 12.00, currency: 'USD', recurrence: 'yearly',  nextDate: d(40),  notifyDaysBefore: 14, notes: '' },
+    { id: uid(), title: 'Alquiler',       category: 'money',   icon: 'home',   amount: 800,   currency: 'USD', recurrence: 'monthly', nextDate: d(8),   notifyDaysBefore: 5, notes: '' },
+    { id: uid(), title: 'Internet',       category: 'money',   icon: 'globe',  amount: 45,    currency: 'USD', recurrence: 'monthly', nextDate: d(1),   notifyDaysBefore: 3, notes: '' },
+    { id: uid(), title: 'Seguro auto',    category: 'money',   icon: 'shield', amount: 90,    currency: 'USD', recurrence: 'monthly', nextDate: d(-2),  notifyDaysBefore: 4, notes: '' },
+    { id: uid(), title: 'Gimnasio',       category: 'routine', icon: 'dumbbell', amount: 30,  currency: 'USD', recurrence: 'monthly', nextDate: d(6),   notifyDaysBefore: 3, notes: '3 veces/semana' },
+    { id: uid(), title: 'Regar plantas',  category: 'home',    icon: 'leaf',   amount: null,  currency: 'USD', recurrence: 'weekly',  nextDate: d(2),   notifyDaysBefore: 1, notes: '' },
+    { id: uid(), title: 'Cambiar filtro A/C', category: 'home', icon: 'trash', amount: null,  currency: 'USD', recurrence: 'yearly',  nextDate: d(60),  notifyDaysBefore: 14, notes: '' },
+    { id: uid(), title: 'Comprar regalo', category: 'shopping',icon: 'gift',   amount: null,  currency: 'USD', recurrence: 'none',    nextDate: d(5),   notifyDaysBefore: 2, notes: '' },
   ];
 }
 
@@ -203,7 +260,7 @@ function renderGreeting() {
   const el = document.getElementById('greeting');
   el.textContent = overdue > 0
     ? `${saludo} — tienes ${overdue} pendiente${overdue>1?'s':''} vencido${overdue>1?'s':''}`
-    : `${saludo} — todo bajo control ✨`;
+    : `${saludo} — todo bajo control`;
 }
 
 function renderSummary() {
@@ -229,12 +286,12 @@ function renderSummary() {
 
 function renderFilters() {
   const el = document.getElementById('filters');
-  const chip = (key, label) =>
-    `<button class="filter-chip ${activeFilter===key?'active':''}" data-filter="${key}">${label}</button>`;
-  let html = chip('all', '✨ Todos');
+  const chip = (key, iconName, label) =>
+    `<button class="filter-chip ${activeFilter===key?'active':''}" data-filter="${key}">${svg(iconName)} ${label}</button>`;
+  let html = chip('all', 'star', 'Todos');
   for (const [key, c] of Object.entries(CATEGORIES)) {
     const n = loops.filter(l => l.category === key).length;
-    html += chip(key, `${c.icon} ${c.label}${n ? ` (${n})` : ''}`);
+    html += chip(key, c.icon, `${c.label}${n ? ` (${n})` : ''}`);
   }
   el.innerHTML = html;
   el.querySelectorAll('.filter-chip').forEach(b =>
@@ -259,7 +316,7 @@ function renderBoard(main) {
   const list = visibleLoops();
   if (!list.length) {
     if (searchQuery) {
-      main.innerHTML = `<div class="empty"><div class="em">🔍</div>
+      main.innerHTML = `<div class="empty"><div class="em">${svg('search')}</div>
         <h3>Sin resultados</h3><p>Ningún Loop coincide con "<strong>${escapeHtml(searchQuery)}</strong>".</p></div>`;
       return;
     }
@@ -280,12 +337,12 @@ function cardHTML(loop) {
   const s = STATES[st];
   const cd = countdownText(loop);
   const cat = CATEGORIES[loop.category];
-  const doneLabel = loop.amount ? 'Pagado ✓' : 'Hecho ✓';
+  const doneLabel = loop.amount ? 'Pagado' : 'Hecho';
   return `
     <div class="loop-card" data-id="${loop.id}" style="--state-color:${s.color}">
       <div class="card-head">
-        <span class="card-icon">${escapeHtml(loop.icon || cat.icon)}</span>
-        <span class="state-badge">${s.icon} ${s.label}</span>
+        <span class="card-icon">${renderIcon(loop.icon || cat.icon)}</span>
+        <span class="state-badge">${svg(s.icon)} ${s.label}</span>
       </div>
       <div class="title">${escapeHtml(loop.title)}</div>
       <div class="countdown">
@@ -294,9 +351,9 @@ function cardHTML(loop) {
       </div>
       <div class="meta">
         <span class="amount">${loop.amount ? money(loop.amount) : '<span style="color:var(--text-dim)">—</span>'}</span>
-        <span class="cycle">${cat.icon} ${RECURRENCE[loop.recurrence].label}</span>
+        <span class="cycle">${svg(cat.icon)} ${RECURRENCE[loop.recurrence].label}</span>
       </div>
-      <button class="done-btn">${doneLabel}</button>
+      <button class="done-btn">${svg('check')} ${doneLabel}</button>
     </div>`;
 }
 
@@ -307,7 +364,7 @@ function renderSubs(main) {
   const yearly = monthly * 12;
 
   if (!subs.length) {
-    main.innerHTML = `<div class="empty"><div class="em">💳</div>
+    main.innerHTML = `<div class="empty"><div class="em">${svg('credit-card')}</div>
       <h3>Sin suscripciones aún</h3>
       <p>Agrega Netflix, Spotify, tu nube… y mira cuánto gastas al mes.</p></div>`;
     return;
@@ -322,14 +379,14 @@ function renderSubs(main) {
       const when = dl < 0 ? `vencido hace ${Math.abs(dl)}d` : dl === 0 ? 'vence hoy' : dl === 1 ? 'mañana' : `en ${dl} días`;
       return `
         <div class="sub-row" data-id="${l.id}" style="--state-color:${s.color}">
-          <span class="ic">${escapeHtml(l.icon || '💳')}</span>
+          <span class="ic">${renderIcon(l.icon || 'credit-card')}</span>
           <div class="info">
             <div class="n">${escapeHtml(l.title)}</div>
             <div class="d">${RECURRENCE[l.recurrence].label} · ${money(monthlyCost(l))}/mes</div>
           </div>
           <div class="right">
             <div class="a">${l.amount ? money(l.amount) : '—'}</div>
-            <div class="c">${s.icon} ${when}</div>
+            <div class="c">${svg(s.icon)} ${when}</div>
           </div>
         </div>`;
     }).join('');
@@ -376,9 +433,9 @@ function renderCalendar(main) {
 
   main.innerHTML = `
     <div class="cal-head">
-      <button class="icon-btn" id="cal-prev">‹</button>
+      <button class="icon-btn" id="cal-prev" aria-label="Mes anterior">${svg('chevron-left')}</button>
       <h3 style="text-transform:capitalize">${monthName}</h3>
-      <button class="icon-btn" id="cal-next">›</button>
+      <button class="icon-btn" id="cal-next" aria-label="Mes siguiente">${svg('chevron-right')}</button>
     </div>
     <div class="cal-grid">${cells}</div>`;
   main.querySelector('#cal-prev').onclick = () => { calOffset--; renderCalendar(main); };
@@ -386,9 +443,9 @@ function renderCalendar(main) {
 }
 
 function renderEmpty(main) {
-  main.innerHTML = `<div class="empty"><div class="em">🔄</div>
+  main.innerHTML = `<div class="empty"><div class="em">${svg('repeat')}</div>
     <h3>Nada por aquí todavía</h3>
-    <p>Toca el botón <strong>＋</strong> para agregar tu primer Loop:<br>
+    <p>Toca el botón <strong>+</strong> para agregar tu primer Loop:<br>
     una suscripción, un pago, una rutina o un recado.</p></div>`;
 }
 
@@ -397,7 +454,7 @@ function renderEmpty(main) {
    ============================================================ */
 function openForm(loop) {
   const isEdit = !!loop;
-  const data = loop || { title: '', category: 'subs', icon: '💳', amount: '', currency: 'USD',
+  const data = loop || { title: '', category: 'subs', icon: 'credit-card', amount: '', currency: 'USD',
                          recurrence: 'monthly', nextDate: offsetDate(7), notifyDaysBefore: 3, notes: '' };
 
   const overlay = document.getElementById('modal-overlay');
@@ -411,7 +468,7 @@ function openForm(loop) {
       <label>Categoría</label>
       <div class="cat-picker" id="cat-picker">
         ${Object.entries(CATEGORIES).map(([k,c]) =>
-          `<button data-cat="${k}" class="${data.category===k?'sel':''}">${c.icon} ${c.label}</button>`).join('')}
+          `<button data-cat="${k}" class="${data.category===k?'sel':''}">${svg(c.icon)} ${c.label}</button>`).join('')}
       </div>
     </div>
 
@@ -423,7 +480,7 @@ function openForm(loop) {
     <div class="field">
       <label>Icono</label>
       <div class="icon-picker" id="icon-picker">
-        ${ICONS.map(i => `<button data-icon="${i}" class="${data.icon===i?'sel':''}">${i}</button>`).join('')}
+        ${ICONS.map(i => `<button data-icon="${i}" class="${data.icon===i?'sel':''}" title="${i}">${svg(i)}</button>`).join('')}
       </div>
     </div>
 
@@ -578,7 +635,7 @@ importFile.onchange = (e) => {
         id: l.id || uid(),
         title: String(l.title || 'Sin nombre'),
         category: CATEGORIES[l.category] ? l.category : 'routine',
-        icon: l.icon || '🔁',
+        icon: l.icon || 'repeat',
         amount: (l.amount === 0 || l.amount) ? Number(l.amount) : null,
         currency: l.currency || 'USD',
         recurrence: RECURRENCE[l.recurrence] ? l.recurrence : 'none',
@@ -722,6 +779,10 @@ if ('serviceWorker' in navigator) {
 /* ============================================================
    Arranque + refresco en vivo de cuentas regresivas / avisos
    ============================================================ */
+// Inyecta los iconos SVG del chrome estático (header, menú, vistas, FAB)
+document.querySelectorAll('[data-ico]').forEach(el => {
+  el.insertAdjacentHTML('afterbegin', svg(el.dataset.ico));
+});
 render();
 checkDue();
 // Cada minuto: actualiza las cuentas regresivas en vivo y revisa vencimientos
