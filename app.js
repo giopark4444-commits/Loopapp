@@ -39,6 +39,7 @@ const ICONS = ['💳','📺','🎵','🎮','☁️','📱','💡','💧','🔥',
 let loops = load();
 let activeFilter = 'all';
 let activeView = 'board';
+let searchQuery = '';
 
 /* ---------- Persistencia ---------- */
 function load() {
@@ -179,6 +180,7 @@ function deleteLoop(id) { loops = loops.filter(l => l.id !== id); save(); render
 function visibleLoops() {
   let list = loops.slice();
   if (activeFilter !== 'all') list = list.filter(l => l.category === activeFilter);
+  if (searchQuery) list = list.filter(l => l.title.toLowerCase().includes(searchQuery));
   // Orden por urgencia y, dentro, por días restantes
   return list.sort((a, b) => {
     const sa = STATES[statusOf(a)].order, sb = STATES[statusOf(b)].order;
@@ -244,6 +246,9 @@ function renderView() {
   document.querySelectorAll('#view-switch button').forEach(b =>
     b.classList.toggle('active', b.dataset.view === activeView));
 
+  // El buscador solo aplica a Tablero y Suscripciones
+  document.getElementById('search').style.display = activeView === 'calendar' ? 'none' : '';
+
   if (activeView === 'board') return renderBoard(main);
   if (activeView === 'subs') return renderSubs(main);
   if (activeView === 'calendar') return renderCalendar(main);
@@ -252,7 +257,14 @@ function renderView() {
 /* ---------- Vista: Tablero ---------- */
 function renderBoard(main) {
   const list = visibleLoops();
-  if (!list.length) return renderEmpty(main);
+  if (!list.length) {
+    if (searchQuery) {
+      main.innerHTML = `<div class="empty"><div class="em">🔍</div>
+        <h3>Sin resultados</h3><p>Ningún Loop coincide con "<strong>${escapeHtml(searchQuery)}</strong>".</p></div>`;
+      return;
+    }
+    return renderEmpty(main);
+  }
 
   main.innerHTML = `<div class="cards-grid">${list.map(cardHTML).join('')}</div>`;
   main.querySelectorAll('.loop-card').forEach(card => {
@@ -301,7 +313,8 @@ function renderSubs(main) {
     return;
   }
 
-  const rows = subs
+  const shown = searchQuery ? subs.filter(l => l.title.toLowerCase().includes(searchQuery)) : subs;
+  const rows = shown
     .sort((a, b) => daysUntil(a.nextDate) - daysUntil(b.nextDate))
     .map(l => {
       const s = STATES[statusOf(l)];
@@ -529,6 +542,60 @@ document.getElementById('about-app').onclick = () => {
 
 document.querySelectorAll('#view-switch button').forEach(b =>
   b.onclick = () => { activeView = b.dataset.view; render(); });
+
+/* ---------- Buscador ---------- */
+document.getElementById('search').oninput = (e) => {
+  searchQuery = e.target.value.trim().toLowerCase();
+  renderView();
+};
+
+/* ============================================================
+   Copia de seguridad (exportar / importar) — todo local
+   ============================================================ */
+function exportData() {
+  const blob = new Blob([JSON.stringify(loops, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `loopapp-backup-${fmtDate(todayMid())}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+document.getElementById('export-data').onclick = () => { closeMenu(); exportData(); };
+
+const importFile = document.getElementById('import-file');
+document.getElementById('import-data').onclick = () => { closeMenu(); importFile.click(); };
+importFile.onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const raw = JSON.parse(r.result);
+      if (!Array.isArray(raw)) throw new Error('formato');
+      if (!confirm(`Importar ${raw.length} Loop${raw.length === 1 ? '' : 's'}? Esto reemplazará los actuales.`)) return;
+      // Normaliza cada registro para evitar datos corruptos
+      loops = raw.map(l => ({
+        id: l.id || uid(),
+        title: String(l.title || 'Sin nombre'),
+        category: CATEGORIES[l.category] ? l.category : 'routine',
+        icon: l.icon || '🔁',
+        amount: (l.amount === 0 || l.amount) ? Number(l.amount) : null,
+        currency: l.currency || 'USD',
+        recurrence: RECURRENCE[l.recurrence] ? l.recurrence : 'none',
+        nextDate: /^\d{4}-\d{2}-\d{2}$/.test(l.nextDate) ? l.nextDate : offsetDate(7),
+        notifyDaysBefore: Number.isFinite(+l.notifyDaysBefore) ? +l.notifyDaysBefore : 3,
+        notes: l.notes || '',
+        history: Array.isArray(l.history) ? l.history : [],
+      }));
+      save(); render();
+    } catch (err) {
+      alert('Archivo no válido. Debe ser un respaldo .json exportado desde Loopapp.');
+    } finally {
+      importFile.value = '';
+    }
+  };
+  r.readAsText(file);
+};
 
 /* ============================================================
    Avisos (notificaciones locales del navegador)

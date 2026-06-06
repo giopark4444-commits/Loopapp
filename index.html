@@ -20,6 +20,9 @@
               <a class="dropdown-item" href="menu.html" role="menuitem">🍽️ Menú &amp; Web</a>
               <button class="dropdown-item" id="enable-notify" role="menuitem">🔔 Activar avisos</button>
               <button class="dropdown-item" id="install-app" role="menuitem" hidden>📲 Instalar app</button>
+              <div class="dropdown-sep"></div>
+              <button class="dropdown-item" id="export-data" role="menuitem">⬇️ Exportar datos</button>
+              <button class="dropdown-item" id="import-data" role="menuitem">⬆️ Importar datos</button>
               <button class="dropdown-item" id="about-app" role="menuitem">ℹ️ Acerca de</button>
               <div class="dropdown-sep"></div>
               <button class="dropdown-item danger" id="reset-data" role="menuitem">♻️ Restablecer datos de ejemplo</button>
@@ -47,6 +50,9 @@
       <button data-view="calendar">📅 Calendario</button>
     </div>
 
+    <!-- Buscador -->
+    <input id="search" class="search-input" type="search" placeholder="🔍 Buscar Loop…" autocomplete="off" />
+
     <!-- Contenido principal -->
     <main id="main"></main>
 
@@ -58,6 +64,9 @@
   <div class="modal-overlay" id="modal-overlay" hidden>
     <div class="modal" id="modal"></div>
   </div>
+
+  <!-- Input oculto para importar respaldo -->
+  <input id="import-file" type="file" accept="application/json,.json" hidden />
 
   <script src="app.js"></script>
 </body>

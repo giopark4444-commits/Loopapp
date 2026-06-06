@@ -92,8 +92,15 @@ body {
   padding: 9px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .view-switch button.active { background: var(--card-hover); color: var(--text); }
 
+/* ---------- Buscador ---------- */
+.search-input { width: 100%; margin-top: 14px; background: var(--card);
+  border: 1px solid var(--border); color: var(--text); padding: 11px 14px;
+  border-radius: 12px; font-size: 14px; font-family: inherit; }
+.search-input:focus { outline: none; border-color: var(--accent); }
+.search-input::placeholder { color: var(--text-dim); }
+
 /* ---------- Cards grid ---------- */
-main { margin-top: 18px; }
+main { margin-top: 14px; }
 .cards-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 @media (max-width: 460px) { .cards-grid { grid-template-columns: 1fr; } }
 
@@ -199,11 +206,14 @@ main { margin-top: 18px; }
 .btn-danger { background: transparent; border: 1px solid var(--overdue); color: var(--overdue); }
 .btn:hover { filter: brightness(1.1); }
 
-/* ---------- Animaciones ---------- */
+/* ---------- Animaciones e interacción ---------- */
 @keyframes fadeUp { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
 .cards-grid .loop-card { animation: fadeUp 0.25s ease both; }
 .sub-row { animation: fadeUp 0.2s ease both; }
 .dropdown { animation: fadeUp 0.14s ease both; }
+.icon-btn, .filter-chip, .view-switch button, .btn, .done-btn { transition: transform 0.08s ease, background 0.15s ease, border-color 0.15s ease; }
+.icon-btn:active, .filter-chip:active, .view-switch button:active, .btn:active, .done-btn:active, .fab:active { transform: scale(0.95); }
+.fab:active { transform: translateX(-50%) scale(0.95); }
 @media (prefers-reduced-motion: reduce) {
   .cards-grid .loop-card, .sub-row, .dropdown { animation: none; }
 }
