@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#15110a" />
+<title>Loopapp · Menú</title>
+<link rel="stylesheet" href="menu.css" />
+</head>
+<body>
+  <!-- Barra superior (rubros) -->
+  <header class="topbar">
+    <a class="back" href="index.html">‹ Mis Loops</a>
+    <div class="topbrand">🧾 Loopapp · <b>Menú</b></div>
+    <div class="tabs" id="tabs">
+      <button data-tab="editar" class="active">✏️ Editar</button>
+      <button data-tab="preview">👁️ Vista</button>
+      <button data-tab="qr">🔳 QR</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- PANEL DE ADMINISTRACIÓN -->
+    <section class="admin pane" id="pane-editar">
+      <div class="block">
+        <h3>Identidad del menú</h3>
+        <div class="field"><label>Nombre del bar</label><input id="f-brand" placeholder="LA BODEGA" /></div>
+        <div class="field"><label>Subtítulo</label><input id="f-tagline" placeholder="Bar & Cocina" /></div>
+      </div>
+
+      <div class="block">
+        <h3>Fondo</h3>
+        <div class="bg-types" id="bg-types">
+          <button data-bg="gradient" class="active">Degradado oscuro</button>
+          <button data-bg="color">Color sólido</button>
+          <button data-bg="image">Imagen</button>
+        </div>
+        <div class="field" id="bg-color-field" hidden>
+          <label>Color de fondo</label><input id="f-bgcolor" type="color" value="#15110a" />
+        </div>
+        <div class="field" id="bg-image-field" hidden>
+          <label>Imagen de fondo</label>
+          <input id="f-bgimage" type="file" accept="image/*" />
+          <button class="mini danger" id="bg-image-clear" hidden>Quitar imagen</button>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-head">
+          <h3>Secciones e ítems</h3>
+          <button class="mini" id="add-section">＋ Sección</button>
+        </div>
+        <div id="sections"></div>
+      </div>
+
+      <p class="saved" id="saved-note">Guardado automáticamente en este dispositivo ✓</p>
+    </section>
+
+    <!-- VISTA PREVIA -->
+    <section class="preview-wrap pane" id="pane-preview">
+      <div class="phone" id="phone">
+        <div class="notch"></div>
+        <div class="scroll" id="preview-scroll"></div>
+      </div>
+    </section>
+
+    <!-- QR -->
+    <section class="qr-pane pane" id="pane-qr" hidden>
+      <div class="block">
+        <h3>QR fijo del menú</h3>
+        <p class="hint">Este QR apunta a una URL fija. Aunque edites el menú, el QR impreso seguirá funcionando: siempre mostrará la última versión.</p>
+        <div class="field">
+          <label>URL pública del menú</label>
+          <input id="f-url" placeholder="https://tu-bar.vercel.app/menu" />
+          <p class="hint" id="url-hint">Tendrás esta URL al publicar el menú (te ayudo a conectarlo a Vercel). Mientras tanto puedes escribir cualquier enlace para probar el QR.</p>
+        </div>
+        <div class="qr-box" id="qr-box"></div>
+        <div class="qr-actions">
+          <button class="btn" id="qr-download">⬇️ Descargar PNG</button>
+          <button class="btn ghost" id="qr-print">🖨️ Imprimir</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+<script src="menu.js"></script>
+</body>
+</html>

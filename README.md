@@ -42,6 +42,21 @@ Luego abre `http://localhost:8000`. En el móvil, usa *"Agregar a pantalla de in
 | `app.js` | Lógica: estados, cuentas regresivas, recurrencia, tracking, formulario |
 | `manifest.webmanifest` / `sw.js` / `icon.svg` | PWA (instalable + offline) |
 
+## 🧾 Módulo Menú (Fase 1 — nuevo)
+
+Rubro para crear el **menú digital del bar** (theme *Oscuro Elegante*) que los clientes ven al escanear un QR.
+
+- **Editor de casillas desplegables** — agregar/editar/eliminar **secciones** e **ítems**, reordenar.
+- Cada ítem: **nombre, descripción, precio y foto** (o emoji si no subes foto).
+- **Fondo personalizable** — degradado, color sólido o **imagen cargada**.
+- **Vista previa en vivo** (maqueta de celular) que refleja cada cambio.
+- **QR fijo imprimible** — apunta a una URL fija; descarga PNG o imprime.
+- Todo se guarda automáticamente en el dispositivo (localStorage).
+
+Se abre desde el ícono 🧾 en la cabecera del dashboard, o directamente en `menu.html`.
+
+> Nota: el QR se genera vía un servicio de imagen (requiere internet del lado del administrador). La URL pública real la tendrás al publicar el menú (ver roadmap). Próximo: generación de QR offline + backend en vivo.
+
 ## 🔭 Próximos pasos (roadmap)
 
 - 🔔 Notificaciones push de vencimientos.
