@@ -477,11 +477,29 @@ function escapeAttr(s) { return escapeHtml(s); }
    Eventos globales
    ============================================================ */
 document.getElementById('add-btn').onclick = () => openForm(null);
-document.getElementById('settings-btn').onclick = () => {
+
+/* ---------- Menú desplegable del header ---------- */
+const menuToggle = document.getElementById('menu-toggle');
+const appMenu = document.getElementById('app-menu');
+function closeMenu() { appMenu.hidden = true; menuToggle.setAttribute('aria-expanded', 'false'); }
+menuToggle.onclick = (e) => {
+  e.stopPropagation();
+  const open = appMenu.hidden;
+  appMenu.hidden = !open;
+  menuToggle.setAttribute('aria-expanded', String(open));
+};
+document.addEventListener('click', (e) => {
+  if (!appMenu.hidden && !appMenu.contains(e.target) && e.target !== menuToggle) closeMenu();
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
+
+document.getElementById('reset-data').onclick = () => {
+  closeMenu();
   if (confirm('¿Restablecer datos de ejemplo? (borra tus Loops actuales)')) {
     loops = seed(); save(); render();
   }
 };
+
 document.querySelectorAll('#view-switch button').forEach(b =>
   b.onclick = () => { activeView = b.dataset.view; render(); });
 

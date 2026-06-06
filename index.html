@@ -14,15 +14,18 @@
     <header class="app-header">
       <div class="header-top">
         <div class="brand">
+          <div class="menu-wrap">
+            <button class="icon-btn" id="menu-toggle" title="Menú" aria-label="Abrir menú" aria-haspopup="true" aria-expanded="false">☰</button>
+            <div class="dropdown" id="app-menu" role="menu" hidden>
+              <a class="dropdown-item" href="menu.html" role="menuitem">🧾 Menú &amp; Web</a>
+              <button class="dropdown-item danger" id="reset-data" role="menuitem">🔄 Restablecer datos de ejemplo</button>
+            </div>
+          </div>
           <span class="brand-logo">🔄</span>
           <div>
             <h1>Loopapp</h1>
             <p class="tagline" id="greeting">Todo lo que se repite, a la vista</p>
           </div>
-        </div>
-        <div style="display:flex;gap:8px">
-          <a class="icon-btn" href="menu.html" title="Menú & Web" style="text-decoration:none;display:flex;align-items:center;justify-content:center">🧾</a>
-          <button class="icon-btn" id="settings-btn" title="Opciones">⚙️</button>
         </div>
       </div>
 
