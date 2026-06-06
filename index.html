@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#6366f1" />
+  <title>Loopapp — Todo lo que se repite, a la vista</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-top">
+        <div class="brand">
+          <span class="brand-logo">🔄</span>
+          <div>
+            <h1>Loopapp</h1>
+            <p class="tagline" id="greeting">Todo lo que se repite, a la vista</p>
+          </div>
+        </div>
+        <button class="icon-btn" id="settings-btn" title="Opciones">⚙️</button>
+      </div>
+
+      <!-- Resumen de estados -->
+      <div class="summary-bar" id="summary-bar"></div>
+    </header>
+
+    <!-- Filtros de categoría -->
+    <nav class="filters" id="filters"></nav>
+
+    <!-- Vistas -->
+    <div class="view-switch" id="view-switch">
+      <button data-view="board" class="active">🗂️ Tablero</button>
+      <button data-view="subs">💳 Suscripciones</button>
+      <button data-view="calendar">📅 Calendario</button>
+    </div>
+
+    <!-- Contenido principal -->
+    <main id="main"></main>
+
+    <!-- Botón flotante para agregar -->
+    <button class="fab" id="add-btn" title="Agregar Loop">＋</button>
+  </div>
+
+  <!-- Modal de formulario -->
+  <div class="modal-overlay" id="modal-overlay" hidden>
+    <div class="modal" id="modal"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

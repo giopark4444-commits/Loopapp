@@ -1,0 +1,18 @@
+{
+  "name": "Loopapp — Todo lo que se repite, a la vista",
+  "short_name": "Loopapp",
+  "description": "Dashboard visual de responsabilidades recurrentes: suscripciones, pagos, rutinas y recados, con cuentas regresivas y colores por estado.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f1120",
+  "theme_color": "#6366f1",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
