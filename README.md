@@ -55,7 +55,16 @@ Rubro para crear el **menú digital del bar** (theme *Oscuro Elegante*) que los 
 
 Se abre desde el ícono 🧾 en la cabecera del dashboard, o directamente en `menu.html`.
 
-> Nota: el QR se genera vía un servicio de imagen (requiere internet del lado del administrador). La URL pública real la tendrás al publicar el menú (ver roadmap). Próximo: generación de QR offline + backend en vivo.
+### ☁️ Backend en vivo (Supabase)
+
+El menú se publica en la nube para que los clientes lo vean al escanear el QR:
+
+- **`config.js`** — URL y clave pública de Supabase (seguras de exponer).
+- **`m.html` / `m.js`** — página pública (solo lectura) que ve el cliente; el QR apunta a `m.html?slug=<tu-bar>`.
+- Tabla `menus` en Supabase con **lectura pública** (RLS) y **escritura protegida**: los cambios pasan por la Edge Function `menu-save`, que valida tu **clave de edición**.
+- En el editor, pestaña **QR**: define la dirección (slug), guarda tu **clave de edición** y pulsa **Publicar**. La URL pública y el QR se generan solos. **Traer de la nube** sincroniza el menú en otro dispositivo (con la misma clave).
+
+> El QR se genera vía un servicio de imagen (requiere internet del administrador). Las fotos se guardan embebidas (base64); para catálogos grandes conviene migrar a Supabase Storage más adelante.
 
 ## 🔭 Próximos pasos (roadmap)
 

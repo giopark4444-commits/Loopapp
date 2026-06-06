@@ -9,6 +9,26 @@ const uid = () => Math.random().toString(36).slice(2, 9);
 /* ---------- Estado ---------- */
 let data = load();
 
+/* ---------- Config nube + estado de publicación ---------- */
+const cfg = window.LOOPAPP_SUPABASE || {};
+const CKEY = 'loopapp.menu.cloud';
+let cloud = loadCloud();
+function loadCloud() {
+  try { const r = localStorage.getItem(CKEY); if (r) return JSON.parse(r); } catch (e) {}
+  return { slug: '', editKey: randKey() };
+}
+function saveCloud() { localStorage.setItem(CKEY, JSON.stringify(cloud)); }
+function randKey() { return Math.random().toString(36).slice(2, 8) + Math.random().toString(36).slice(2, 8); }
+function slugify(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+}
+function publicUrlFor(slug) {
+  if (!slug) return '';
+  const base = location.origin + location.pathname.replace(/[^/]*$/, '');
+  return `${base}m.html?slug=${encodeURIComponent(slug)}`;
+}
+
 function load() {
   try { const r = localStorage.getItem(KEY); if (r) return JSON.parse(r); } catch (e) {}
   return seed();
@@ -73,11 +93,57 @@ function bindStatic() {
   $('#bg-image-clear').onclick = () => { data.bgImage = null; data.bgType = 'gradient'; save(); syncBgUI(); renderPreview(); };
   syncBgUI();
 
-  // QR
-  $('#f-url').value = data.publicUrl;
-  $('#f-url').oninput = e => { data.publicUrl = e.target.value.trim(); save(); renderQR(); };
+  // Publicar / Nube
+  if (!cloud.slug) cloud.slug = slugify(data.brand) || ('bar-' + randKey().slice(0, 5));
+  $('#f-slug').value = cloud.slug;
+  $('#f-editkey').value = cloud.editKey;
+  refreshPublicUrl();
+  $('#f-slug').oninput = e => { cloud.slug = slugify(e.target.value); saveCloud(); refreshPublicUrl(); };
+  $('#f-slug').onblur = () => { $('#f-slug').value = cloud.slug; };
+  $('#copy-key').onclick = () => { try { navigator.clipboard.writeText(cloud.editKey); status('Clave copiada ✓'); } catch (e) { status('Copia manual: ' + cloud.editKey); } };
+  $('#publish-btn').onclick = publish;
+  $('#pull-btn').onclick = pull;
   $('#qr-download').onclick = downloadQR;
   $('#qr-print').onclick = () => window.print();
+}
+
+function refreshPublicUrl() {
+  data.publicUrl = publicUrlFor(cloud.slug);
+  const u = $('#f-url'); if (u) u.value = data.publicUrl;
+  renderQR();
+}
+function status(msg) { const n = $('#publish-status'); if (n) n.textContent = msg || ''; }
+
+async function publish() {
+  if (!/^[a-z0-9-]{3,40}$/.test(cloud.slug)) { status('Pon una dirección válida (3–40, minúsculas, números o guiones).'); return; }
+  if (!cfg.saveFn) { status('Falta configurar el backend.'); return; }
+  status('Publicando…');
+  try {
+    const res = await fetch(cfg.saveFn, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: cfg.anonKey, Authorization: `Bearer ${cfg.anonKey}` },
+      body: JSON.stringify({ slug: cloud.slug, edit_key: cloud.editKey, data }),
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok || j.error) { status('⚠️ ' + (j.error || 'No se pudo publicar')); return; }
+    saveCloud(); refreshPublicUrl();
+    status('✅ Publicado. Tu menú ya es visible en la URL pública (abre el QR para verlo).');
+  } catch (e) { status('⚠️ Error de red al publicar. Revisa tu conexión.'); }
+}
+
+async function pull() {
+  if (!cloud.slug) { status('Primero define la dirección (slug).'); return; }
+  status('Trayendo de la nube…');
+  try {
+    const res = await fetch(`${cfg.url}/rest/v1/menus?slug=eq.${encodeURIComponent(cloud.slug)}&select=data`,
+      { headers: { apikey: cfg.anonKey, Authorization: `Bearer ${cfg.anonKey}` } });
+    const rows = await res.json();
+    if (!rows.length) { status('No hay nada publicado con esa dirección todavía.'); return; }
+    if (!confirm('Esto reemplazará tu menú local con la versión publicada. ¿Continuar?')) { status(''); return; }
+    data = Object.assign(seed(), rows[0].data);
+    save(); bindStatic(); buildAdmin(); renderPreview();
+    status('✅ Menú cargado desde la nube.');
+  } catch (e) { status('⚠️ Error al traer de la nube.'); }
 }
 
 function setBgType(type) { data.bgType = type; save(); syncBgUI(); renderPreview(); }
@@ -241,7 +307,7 @@ function qrUrl(size) {
 function renderQR() {
   const box = $('#qr-box');
   if (!data.publicUrl) {
-    box.innerHTML = `<div class="ph">Escribe la URL pública arriba<br>para generar el QR imprimible</div>`;
+    box.innerHTML = `<div class="ph">Define la dirección (slug) y publica<br>para generar el QR imprimible</div>`;
     return;
   }
   box.innerHTML = `<img id="qr-img" src="${qrUrl(240)}" alt="QR del menú" />`;

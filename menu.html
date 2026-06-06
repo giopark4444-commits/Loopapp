@@ -64,15 +64,36 @@
       </div>
     </section>
 
-    <!-- QR -->
+    <!-- PUBLICAR + QR -->
     <section class="qr-pane pane" id="pane-qr" hidden>
       <div class="block">
-        <h3>QR fijo del menú</h3>
-        <p class="hint">Este QR apunta a una URL fija. Aunque edites el menú, el QR impreso seguirá funcionando: siempre mostrará la última versión.</p>
+        <h3>Publicar en la nube</h3>
+        <p class="hint">Publica tu menú para que cualquiera lo vea al escanear el QR. Aunque lo edites después, el QR impreso seguirá funcionando y mostrará la última versión.</p>
         <div class="field">
-          <label>URL pública del menú</label>
-          <input id="f-url" placeholder="https://tu-bar.vercel.app/menu" />
-          <p class="hint" id="url-hint">Tendrás esta URL al publicar el menú (te ayudo a conectarlo a Vercel). Mientras tanto puedes escribir cualquier enlace para probar el QR.</p>
+          <label>Dirección del menú (slug)</label>
+          <input id="f-slug" placeholder="mi-bar" />
+          <p class="hint">Solo minúsculas, números y guiones (3–40). Es parte del enlace público.</p>
+        </div>
+        <div class="field">
+          <label>Clave de edición — guárdala</label>
+          <div style="display:flex;gap:8px">
+            <input id="f-editkey" readonly />
+            <button class="mini ghost" id="copy-key" type="button">Copiar</button>
+          </div>
+          <p class="hint">La necesitas para editar tu menú desde otro dispositivo. No la compartas con clientes.</p>
+        </div>
+        <div class="qr-actions" style="margin-bottom:10px">
+          <button class="btn" id="publish-btn">☁️ Publicar cambios</button>
+          <button class="btn ghost" id="pull-btn">⬇️ Traer de la nube</button>
+        </div>
+        <p class="hint" id="publish-status"></p>
+      </div>
+
+      <div class="block">
+        <h3>QR fijo del menú</h3>
+        <div class="field">
+          <label>URL pública (la del QR)</label>
+          <input id="f-url" readonly placeholder="(se genera al publicar)" />
         </div>
         <div class="qr-box" id="qr-box"></div>
         <div class="qr-actions">
@@ -83,6 +104,7 @@
     </section>
   </main>
 
+<script src="config.js"></script>
 <script src="menu.js"></script>
 </body>
 </html>
