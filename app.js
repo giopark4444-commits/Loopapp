@@ -49,7 +49,7 @@ function load() {
   } catch (e) { /* ignore */ }
   return seed();
 }
-function save() { localStorage.setItem(STORE_KEY, JSON.stringify(loops)); }
+function save() { localStorage.setItem(STORE_KEY, JSON.stringify(loops)); scheduleSync(); }
 
 /* ---------- Datos de ejemplo (primera vez) ---------- */
 function seed() {
@@ -598,19 +598,81 @@ importFile.onchange = (e) => {
 };
 
 /* ============================================================
-   Avisos (notificaciones locales del navegador)
+   Avisos: push real (app cerrada) + notificación local (app abierta)
    ============================================================ */
 const NOTIFY_SENT_KEY = 'loopapp.notify.sent.v1';
-function notifyEnabled() { return 'Notification' in window && Notification.permission === 'granted'; }
+const PUSH_ENABLED_KEY = 'loopapp.push.enabled';
+const DEVICE_KEY = 'loopapp.device.id';
+const SB = window.LOOPAPP_SUPABASE || {};
+const VAPID_PUBLIC = (window.LOOPAPP_PUSH && window.LOOPAPP_PUSH.vapidPublic) || '';
 
-document.getElementById('enable-notify').onclick = async () => {
-  closeMenu();
-  if (!('Notification' in window)) { alert('Tu navegador no soporta notificaciones.'); return; }
-  let perm = Notification.permission;
-  if (perm !== 'granted') perm = await Notification.requestPermission();
-  if (perm === 'granted') { alert('Avisos activados 🔔\nTe avisaremos cuando algo esté por vencer (con la app abierta).'); checkDue(); }
-  else alert('No se activaron los avisos. Puedes habilitarlos en los permisos del navegador.');
-};
+function notifyEnabled() { return 'Notification' in window && Notification.permission === 'granted'; }
+function pushEnabled() { return localStorage.getItem(PUSH_ENABLED_KEY) === '1'; }
+function deviceId() {
+  let id = localStorage.getItem(DEVICE_KEY);
+  if (!id) { id = 'dev_' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2); localStorage.setItem(DEVICE_KEY, id); }
+  return id;
+}
+function urlBase64ToUint8Array(s) {
+  const pad = '='.repeat((4 - s.length % 4) % 4);
+  const b64 = (s + pad).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(b64); const arr = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+  return arr;
+}
+function sbHeaders() { return { 'Content-Type': 'application/json', apikey: SB.anonKey, Authorization: `Bearer ${SB.anonKey}` }; }
+
+/* Sincroniza lo mínimo de cada Loop a la nube (solo si el push está activo) */
+let syncTimer;
+function scheduleSync() {
+  if (!pushEnabled()) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncReminders, 1500);
+}
+async function syncReminders() {
+  if (!pushEnabled() || !SB.url) return;
+  const reminders = loops.map(l => ({
+    loop_id: l.id, title: l.title, next_date: l.nextDate, notify_days: l.notifyDaysBefore ?? 3,
+  }));
+  try {
+    await fetch(`${SB.url}/functions/v1/push-sync`, {
+      method: 'POST', headers: sbHeaders(),
+      body: JSON.stringify({ device_id: deviceId(), reminders }),
+    });
+  } catch (e) { /* reintentará en el próximo cambio */ }
+}
+
+async function setupPush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+    alert('Tu navegador no soporta notificaciones push.'); return;
+  }
+  if (!VAPID_PUBLIC || !SB.url) { alert('Falta configurar el push en el servidor.'); return; }
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') { alert('No se activaron los avisos. Habilítalos en los permisos del navegador.'); return; }
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC),
+      });
+    }
+    const res = await fetch(`${SB.url}/functions/v1/push-subscribe`, {
+      method: 'POST', headers: sbHeaders(),
+      body: JSON.stringify({ device_id: deviceId(), subscription: sub }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    localStorage.setItem(PUSH_ENABLED_KEY, '1');
+    await syncReminders();
+    checkDue();
+    alert('Avisos activados 🔔\nTe llegarán aunque cierres la app (cuando algo esté por vencer).');
+  } catch (e) {
+    alert('No se pudieron activar los avisos push. Inténtalo de nuevo.');
+  }
+}
+
+document.getElementById('enable-notify').onclick = () => { closeMenu(); setupPush(); };
 
 function checkDue() {
   if (!notifyEnabled()) return;

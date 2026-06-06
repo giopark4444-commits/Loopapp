@@ -1,5 +1,5 @@
 /* Loopapp service worker — cache simple para uso offline */
-const CACHE = 'loopapp-v9';
+const CACHE = 'loopapp-v10';
 const ASSETS = [
   './',
   './index.html',
@@ -40,5 +40,28 @@ self.addEventListener('fetch', (e) => {
         return res;
       }).catch(() => cached)
     )
+  );
+});
+
+/* ---------- Push (avisos con la app cerrada) ---------- */
+self.addEventListener('push', (e) => {
+  let data = {};
+  try { data = e.data ? e.data.json() : {}; } catch (_) {}
+  const title = data.title || 'Loopapp';
+  const body = data.body || 'Tienes un recordatorio.';
+  e.waitUntil(self.registration.showNotification(title, {
+    body, icon: './icon.svg', badge: './icon.svg',
+    data: { url: data.url || './' },
+  }));
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || './';
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (const c of list) { if ('focus' in c) return c.focus(); }
+      if (self.clients.openWindow) return self.clients.openWindow(url);
+    })
   );
 });
