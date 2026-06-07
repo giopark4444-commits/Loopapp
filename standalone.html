@@ -206,6 +206,7 @@ svg { display: block; }
 .cat-picker button.sel svg { color: var(--accent); }
 .modal-actions { display: flex; gap: 10px; margin-top: 22px; }
 .btn { flex: 1; padding: 13px; border-radius: 12px; border: none; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.btn svg { width: 16px; height: 16px; }
 .btn-primary { background: var(--accent); color: #fff; } .btn-primary:hover { background: var(--accent-soft); }
 .btn-ghost { background: var(--bg); border: 1px solid var(--line); color: var(--text); }
 .btn-danger { background: transparent; border: 1px solid var(--overdue); color: var(--overdue); }
@@ -764,6 +765,9 @@ function renderAjustes(v) {
     </div>
     <div class="brk"><h4>Avisos</h4>
       <button class="opt" id="o-notify">${svg('bell')} ${pushEnabled() ? 'Avisos activados ✓ · reconfigurar' : 'Activar avisos push'}</button></div>
+    <div class="brk"><h4>Calendario</h4>
+      <button class="opt" id="o-ics">${svg('calendar')} Añadir todo a mi calendario</button>
+      <p class="sub" style="padding:6px 2px 0;font-size:11.5px">Crea un archivo .ics compatible con Apple Calendar y Google Calendar, con repeticiones y recordatorios.</p></div>
     <div class="brk"><h4>Datos</h4>
       <button class="opt" id="o-export">${svg('download')} Exportar copia de seguridad</button>
       <button class="opt" id="o-import">${svg('upload')} Importar copia</button>
@@ -774,6 +778,7 @@ function renderAjustes(v) {
   v.querySelector('#p-cur').onchange = (e) => { setPref('currency', e.target.value); render(); };
   v.querySelector('#p-notify').onchange = (e) => { setPref('defaultNotify', String(Math.max(0, Math.min(60, parseInt(e.target.value) || 0)))); };
   const pa = v.querySelector('#p-auto'); pa.onclick = () => { const on = pref('defaultAuto','0') !== '1'; setPref('defaultAuto', on?'1':'0'); pa.classList.toggle('on', on); };
+  v.querySelector('#o-ics').onclick = () => { if (!loops.length) { alert('No hay Loops que exportar.'); return; } downloadICS(loops, 'loopapp'); };
   v.querySelector('#o-notify').onclick = setupPush;
   v.querySelector('#o-export').onclick = exportData;
   v.querySelector('#o-import').onclick = () => document.getElementById('import-file').click();
@@ -813,6 +818,7 @@ function openForm(loop) {
       <div class="field"><label>Próxima fecha</label><input id="f-date" type="date" value="${data.nextDate}" /></div>
       <div class="field"><label>Avisar (días antes)</label><input id="f-notify" type="number" min="0" max="60" value="${data.notifyDaysBefore ?? 3}" /></div>
     </div>
+    ${isEdit ? `<button type="button" class="btn btn-ghost" id="f-ics" style="width:100%;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px">${svg('calendar')} Añadir al calendario</button>` : ''}
     <div class="modal-actions">
       ${isEdit ? `<button class="btn btn-danger" id="f-delete">Eliminar</button>` : ''}
       <button class="btn btn-ghost" id="f-cancel">Cancelar</button>
@@ -827,6 +833,7 @@ function openForm(loop) {
   const sw = modal.querySelector('#f-auto');
   sw.onclick = () => { sel.autoPay = !sel.autoPay; sw.classList.toggle('on', sel.autoPay); };
   const close = () => { overlay.hidden = true; };
+  if (isEdit) modal.querySelector('#f-ics').onclick = () => downloadICS([data], 'loop');
   modal.querySelector('#f-cancel').onclick = close;
   overlay.onclick = (e) => { if (e.target === overlay) close(); };
   if (isEdit) modal.querySelector('#f-delete').onclick = () => { if (confirm(`¿Eliminar "${data.title}"?`)) { deleteLoop(data.id); close(); } };
@@ -885,6 +892,33 @@ function exportData() {
   const blob = new Blob([JSON.stringify(loops, null, 2)], { type: 'application/json' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
   a.download = `loopapp-backup-${fmtDate(todayMid())}.json`; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+/* ---------- Exportar al calendario (Apple / Google) ---------- */
+function icsEsc(s) { return String(s).replace(/[\\;,]/g, m => '\\' + m).replace(/\n/g, '\\n'); }
+function icsStamp() { return new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); }
+function loopVEvent(l) {
+  const freq = { weekly:'WEEKLY', monthly:'MONTHLY', yearly:'YEARLY' }[l.recurrence];
+  const sum = l.title + (l.amount ? ' — ' + money(l.amount) : '');
+  const cat = CATEGORIES[l.category] ? CATEGORIES[l.category].label : '';
+  const desc = [cat, RECURRENCE[l.recurrence].label, payType(l) === 'auto' ? 'pago automático' : ''].filter(Boolean).join(' · ');
+  const e = ['BEGIN:VEVENT', 'UID:' + (l.id || uid()) + '@loopapp', 'DTSTAMP:' + icsStamp(),
+    'DTSTART;VALUE=DATE:' + l.nextDate.replace(/-/g, ''), 'SUMMARY:' + icsEsc(sum), 'DESCRIPTION:' + icsEsc(desc)];
+  if (freq) e.push('RRULE:FREQ=' + freq);
+  const nd = l.notifyDaysBefore || 0;
+  if (nd > 0) e.push('BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + icsEsc(l.title), 'TRIGGER:-P' + nd + 'D', 'END:VALARM');
+  e.push('END:VEVENT');
+  return e.join('\r\n');
+}
+function buildICS(list) {
+  return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Loopapp//ES', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:Loopapp',
+    ...list.map(loopVEvent), 'END:VCALENDAR'].join('\r\n');
+}
+function downloadICS(list, name) {
+  const blob = new Blob([buildICS(list)], { type: 'text/calendar;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = (name || 'loopapp') + '.ics'; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
