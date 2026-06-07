@@ -3,61 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#c96442" />
+  <meta name="theme-color" content="#f6f4ef" />
   <title>Loopapp — Todo lo que se repite, a la vista</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div id="app">
-    <!-- Header -->
-    <header class="app-header">
-      <div class="header-top">
-        <div class="brand">
-          <div class="menu-wrap">
-            <button class="icon-btn" id="menu-toggle" title="Menú" aria-label="Abrir menú" aria-haspopup="true" aria-expanded="false" data-ico="menu"></button>
-            <div class="dropdown" id="app-menu" role="menu" hidden>
-              <button class="dropdown-item" id="enable-notify" role="menuitem"><span data-ico="bell"></span> Activar avisos</button>
-              <button class="dropdown-item" id="install-app" role="menuitem" hidden><span data-ico="smartphone"></span> Instalar app</button>
-              <div class="dropdown-sep"></div>
-              <button class="dropdown-item" id="export-data" role="menuitem"><span data-ico="download"></span> Exportar datos</button>
-              <button class="dropdown-item" id="import-data" role="menuitem"><span data-ico="upload"></span> Importar datos</button>
-              <button class="dropdown-item" id="about-app" role="menuitem"><span data-ico="info"></span> Acerca de</button>
-              <div class="dropdown-sep"></div>
-              <button class="dropdown-item danger" id="reset-data" role="menuitem"><span data-ico="rotate"></span> Restablecer datos de ejemplo</button>
-            </div>
-          </div>
-          <span class="brand-logo" data-ico="repeat"></span>
-          <div>
-            <h1>Loopapp</h1>
-            <p class="tagline" id="greeting">Todo lo que se repite, a la vista</p>
-          </div>
-        </div>
+    <header class="hd">
+      <button class="burger" id="menu-toggle" aria-label="Menú" data-ico="menu"></button>
+      <div class="brand">
+        <h1>Loopapp</h1>
+        <p id="greeting">Todo lo que se repite, a la vista</p>
       </div>
-
-      <!-- Resumen de estados -->
-      <div class="summary-bar" id="summary-bar"></div>
+      <button class="newbtn" id="add-btn"><span data-ico="plus"></span> Nuevo</button>
     </header>
 
-    <!-- Filtros de categoría -->
-    <nav class="filters" id="filters"></nav>
-
-    <!-- Vistas -->
-    <div class="view-switch" id="view-switch">
-      <button data-view="board" class="active"><span data-ico="grid"></span> Tablero</button>
-      <button data-view="subs"><span data-ico="credit-card"></span> Suscripciones</button>
-      <button data-view="calendar"><span data-ico="calendar"></span> Calendario</button>
-    </div>
-
-    <!-- Buscador -->
-    <input id="search" class="search-input" type="search" placeholder="Buscar Loop…" autocomplete="off" />
-
-    <!-- Contenido principal -->
-    <main id="main"></main>
-
-    <!-- Botón flotante para agregar -->
-    <button class="fab" id="add-btn" title="Agregar Loop" aria-label="Agregar Loop" data-ico="plus"></button>
+    <main id="view"></main>
   </div>
+
+  <!-- Menú lateral -->
+  <div class="scrim" id="scrim" hidden></div>
+  <nav class="drawer" id="drawer" aria-label="Navegación">
+    <div class="dhead"><span class="lg" data-ico="repeat"></span><h2>Loopapp</h2></div>
+    <div class="nav" id="nav"></div>
+  </nav>
 
   <!-- Modal de formulario -->
   <div class="modal-overlay" id="modal-overlay" hidden>
