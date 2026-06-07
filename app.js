@@ -46,6 +46,10 @@ const ICON = {
   utensils: '<path d="M3 2v7c0 1.1.9 2 2 2a2 2 0 0 0 2-2V2"/><line x1="7" y1="2" x2="7" y2="22"/><path d="M21 15V2a5 4 0 0 0-3 4v6c0 1.1.9 2 2 2h1z"/><line x1="21" y1="15" x2="21" y2="22"/>',
   plane: '<path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 5.3 3.5c.4.3.8.2 1.3 0l.5-.3c.4-.2.6-.6.5-1z"/>',
   heart: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7z"/>',
+  landmark: '<line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 20 7 4 7"/>',
+  file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
+  key: '<circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6"/><path d="M15.5 7.5l3 3L22 7l-3-3"/>',
+  bike: '<circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM12 17.5V14l-3-3 4-3 2 3h2"/>',
 };
 function svg(name) { const i = ICON[name]; return i == null ? '' :
   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${i}</svg>`; }
@@ -55,6 +59,8 @@ function renderIcon(name) { return ICON[name] ? svg(name) : `<span class="emoji-
 const CATEGORIES = {
   subs:     { label: 'Suscripciones', icon: 'credit-card' },
   money:    { label: 'Alquiler / Servicios', icon: 'wallet' },
+  credit:   { label: 'Créditos / Deudas', icon: 'landmark' },
+  vehicle:  { label: 'Vehículo', icon: 'car' },
   routine:  { label: 'Rutinas', icon: 'repeat' },
   home:     { label: 'Hogar', icon: 'home' },
   shopping: { label: 'Compras', icon: 'shopping-bag' },
@@ -72,7 +78,7 @@ const STATES = {
   ok:       { label: 'Al día',   color: '#5f8a55', order: 3 },
   neutral:  { label: 'Pendiente',color: '#5e7f9c', order: 4 },
 };
-const ICONS = ['credit-card','tv','music','cloud','smartphone','globe','zap','droplet','flame','home','car','shield','dumbbell','pill','leaf','heart','book','gift','utensils','plane','trash','wallet'];
+const ICONS = ['credit-card','landmark','wallet','tv','music','cloud','smartphone','globe','zap','droplet','flame','home','car','bike','shield','file','key','dumbbell','pill','leaf','heart','book','gift','utensils','plane','trash'];
 
 /* ---------- Estado de la app ---------- */
 let loops = load();
@@ -97,7 +103,9 @@ function seed() {
     { id: uid(), title: 'Dominio web', category: 'subs',    icon: 'globe',    amount: 12,    autoPay: false, recurrence: 'yearly',  nextDate: d(40), notifyDaysBefore: 14, history: [] },
     { id: uid(), title: 'Alquiler',    category: 'money',   icon: 'home',     amount: 800,   autoPay: false, recurrence: 'monthly', nextDate: d(8),  notifyDaysBefore: 5, history: [] },
     { id: uid(), title: 'Internet',    category: 'money',   icon: 'globe',    amount: 45,    autoPay: false, recurrence: 'monthly', nextDate: d(1),  notifyDaysBefore: 3, history: [] },
-    { id: uid(), title: 'Seguro auto', category: 'money',   icon: 'shield',   amount: 90,    autoPay: false, recurrence: 'monthly', nextDate: d(-2), notifyDaysBefore: 4, history: [] },
+    { id: uid(), title: 'Seguro auto', category: 'vehicle', icon: 'shield',   amount: 90,    autoPay: false, recurrence: 'monthly', nextDate: d(-2), notifyDaysBefore: 4, history: [] },
+    { id: uid(), title: 'Tarjeta Visa', category: 'credit', icon: 'landmark', amount: 250,   autoPay: false, recurrence: 'monthly', nextDate: d(15), notifyDaysBefore: 5, history: [] },
+    { id: uid(), title: 'Permiso de circulación', category: 'vehicle', icon: 'file', amount: 35, autoPay: false, recurrence: 'yearly', nextDate: d(75), notifyDaysBefore: 14, history: [] },
     { id: uid(), title: 'Gimnasio',    category: 'routine', icon: 'dumbbell', amount: 30,    autoPay: true,  recurrence: 'monthly', nextDate: d(6),  notifyDaysBefore: 3, history: [] },
     { id: uid(), title: 'Regar plantas', category: 'home',  icon: 'leaf',     amount: null,  autoPay: false, recurrence: 'weekly',  nextDate: d(2),  notifyDaysBefore: 1, history: [] },
     { id: uid(), title: 'Cambiar filtro A/C', category: 'home', icon: 'trash', amount: null, autoPay: false, recurrence: 'yearly', nextDate: d(60), notifyDaysBefore: 14, history: [] },
