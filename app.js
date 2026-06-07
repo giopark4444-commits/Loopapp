@@ -133,11 +133,12 @@ function cycleDays(loop) {
 function cdParts(loop) {
   const DAY = 86400000, pad = n => String(n).padStart(2,'0');
   const rem = parseDate(loop.nextDate).getTime() + DAY - Date.now();
-  if (rem <= 0) { const od = Math.abs(daysUntil(loop.nextDate)); return { big: String(od), cl: `día${od===1?'':'s'} vencido` }; }
-  const days = Math.floor(rem/DAY), hh = Math.floor((rem%DAY)/3600000), mm = Math.floor((rem%3600000)/60000), ss = Math.floor((rem%60000)/1000);
-  if (days === 0) return { big: `${pad(hh)}:${pad(mm)}`, cl: 'vence hoy' };
-  if (days === 1) return { big: '1 d', cl: 'para mañana' };
-  return { big: `${days} d`, cl: 'restantes' };
+  if (rem <= 0) { const od = Math.abs(daysUntil(loop.nextDate)); return { big: String(od), cl: `día${od===1?'':'s'} vencido`, pct: 100 }; }
+  const days = Math.floor(rem/DAY), hh = Math.floor((rem%DAY)/3600000), mm = Math.floor((rem%3600000)/60000);
+  const pct = Math.max(6, Math.min(100, Math.round((1 - (rem/DAY) / cycleDays(loop)) * 100)));
+  if (days === 0) return { big: `${pad(hh)}:${pad(mm)}`, cl: 'vence hoy', pct };
+  if (days === 1) return { big: '1 d', cl: 'para mañana', pct };
+  return { big: `${days} d`, cl: 'restantes', pct };
 }
 function nextCycle(dateStr, recurrence) {
   const d = parseDate(dateStr), today = todayMid();
@@ -159,8 +160,38 @@ function occursOn(loop, date) {
   }
 }
 function monthlyCost(loop) { return !loop.amount ? 0 : loop.amount * (RECURRENCE[loop.recurrence]?.perMonth || 0); }
-function money(n) { return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-function money0(n) { return '$' + Math.round(Number(n)).toLocaleString('en-US'); }
+
+/* ---------- Preferencias (moneda, avisos, etc.) ---------- */
+const CURRENCIES = { USD:'$', EUR:'€', GBP:'£', MXN:'$', COP:'$', ARS:'$', CLP:'$', BRL:'R$', PEN:'S/' };
+function pref(k, def) { const v = localStorage.getItem('loopapp.' + k); return v === null ? def : v; }
+function setPref(k, v) { localStorage.setItem('loopapp.' + k, v); }
+function curSym() { return CURRENCIES[pref('currency','USD')] || '$'; }
+function money(n) { return curSym() + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function money0(n) { return curSym() + Math.round(Number(n)).toLocaleString('en-US'); }
+
+/* ---------- Temas ---------- */
+const THEMES = [
+  { key:'marfil',  label:'Marfil',  sw:'#c25c3c', bg:'#f6f4ef' },
+  { key:'noche',   label:'Noche',   sw:'#d98a63', bg:'#1b1916' },
+  { key:'menta',   label:'Menta',   sw:'#3f8f6f', bg:'#eef4ef' },
+  { key:'lavanda', label:'Lavanda', sw:'#7c6bb0', bg:'#f2eff8' },
+  { key:'oceano',  label:'Océano',  sw:'#3f74a8', bg:'#eef2f6' },
+];
+function applyTheme(name) {
+  const t = THEMES.find(x => x.key === name) ? name : 'marfil';
+  document.body.dataset.theme = t;
+  setPref('theme', t);
+  const m = document.querySelector('meta[name="theme-color"]');
+  if (m) m.content = (THEMES.find(x => x.key === t) || {}).bg || '#f6f4ef';
+}
+
+/* ---------- Color de celda del calendario (dividido si hay varias) ---------- */
+function cellBg(colors) {
+  if (colors.length === 1) return colors[0];
+  const step = 100 / colors.length;
+  const stops = colors.map((c, i) => `${c} ${(i*step).toFixed(2)}% ${((i+1)*step).toFixed(2)}%`).join(', ');
+  return `linear-gradient(135deg, ${stops})`;
+}
 
 /* ---------- Acciones ---------- */
 function markDone(id) {
@@ -282,24 +313,28 @@ function rowHTML(loop) {
   const meta = `${tag} ${RECURRENCE[loop.recurrence].label}${loop.amount ? ' · ' + money(loop.amount) : ''}`;
   return `
     <div class="row" data-id="${loop.id}" style="--st:${st.color}">
-      <span class="ic">${renderIcon(loop.icon || cat.icon)}</span>
-      <div class="mid">
-        <div class="t">${escapeHtml(loop.title)}</div>
-        <div class="m">${meta}</div>
+      <div class="row-top">
+        <span class="ic">${renderIcon(loop.icon || cat.icon)}</span>
+        <div class="mid">
+          <div class="t">${escapeHtml(loop.title)}</div>
+          <div class="m">${meta}</div>
+        </div>
+        <div class="right">
+          <div class="cd">${cd.big}</div>
+          <div class="cl">${cd.cl}</div>
+        </div>
+        <button class="chk" title="Marcar ${loop.amount ? 'pagado' : 'hecho'}">${svg('check')}</button>
       </div>
-      <div class="right">
-        <div class="cd">${cd.big}</div>
-        <div class="cl">${cd.cl}</div>
-      </div>
-      <button class="chk" title="Marcar ${loop.amount ? 'pagado' : 'hecho'}">${svg('check')}</button>
+      <div class="rowbar"><i style="width:${cd.pct}%"></i></div>
     </div>`;
 }
 function tickCountdowns() {
   document.querySelectorAll('#list .row').forEach(r => {
     const loop = loops.find(l => l.id === r.dataset.id); if (!loop) return;
     const cd = cdParts(loop);
-    const num = r.querySelector('.cd'), lab = r.querySelector('.cl');
+    const num = r.querySelector('.cd'), lab = r.querySelector('.cl'), bar = r.querySelector('.rowbar > i');
     if (num) num.textContent = cd.big; if (lab) lab.textContent = cd.cl;
+    if (bar) bar.style.width = cd.pct + '%';
     r.style.setProperty('--st', STATES[statusOf(loop)].color);
   });
 }
@@ -318,8 +353,11 @@ function renderCalendario(v) {
   for (let day = 1; day <= days; day++) {
     const date = new Date(year, month, day), ds = fmtDate(date);
     const items = loops.filter(l => occursOn(l, date));
-    const dots = items.slice(0,5).map(l => `<span class="d" style="background:${STATES[statusOf(l)].color}" title="${escapeHtml(l.title)}"></span>`).join('');
-    cells += `<div class="cal-cell ${ds===todayStr?'today':''}"><span class="dn">${day}</span><div class="cal-dots">${dots}</div></div>`;
+    const colors = items.slice(0, 6).map(l => STATES[statusOf(l)].color);
+    const filled = colors.length > 0;
+    const titles = items.map(l => l.title).join(', ');
+    const style = filled ? ` style="background:${cellBg(colors)}"` : '';
+    cells += `<div class="cal-cell ${ds===todayStr?'today':''} ${filled?'filled':''}"${style} title="${escapeAttr(titles)}"><span class="dn">${day}</span></div>`;
   }
   v.innerHTML = `
     <div class="cal-head">
@@ -414,19 +452,39 @@ function fmtNice(ds) { try { return parseDate(ds).toLocaleDateString('es', { day
 
 /* ---------- AJUSTES ---------- */
 function renderAjustes(v) {
+  const cur = pref('currency','USD'), dn = pref('defaultNotify','3'), da = pref('defaultAuto','0')==='1', theme = pref('theme','marfil');
   v.innerHTML = `
-    <div class="sec-title">Datos y opciones</div>
-    <div style="height:8px"></div>
-    <button class="opt" id="o-notify">${svg('bell')} Activar avisos</button>
-    <button class="opt" id="o-install" hidden>${svg('smartphone')} Instalar app</button>
-    <button class="opt" id="o-export">${svg('download')} Exportar datos</button>
-    <button class="opt" id="o-import">${svg('upload')} Importar datos</button>
-    <button class="opt" id="o-about">${svg('info')} Acerca de Loopapp</button>
-    <button class="opt danger" id="o-reset">${svg('rotate')} Restablecer datos de ejemplo</button>`;
+    <div class="sec-title">Ajustes</div>
+    <div class="themes">
+      <h4>Tema</h4>
+      <div class="swatches">
+        ${THEMES.map(t => `<div class="swatch ${theme===t.key?'sel':''}" data-theme="${t.key}">
+          <div class="sw" style="background:${t.bg};--swa:${t.sw}"></div><div class="lb">${t.label}</div></div>`).join('')}
+      </div>
+    </div>
+    <div class="brk"><h4>Preferencias</h4>
+      <div class="pref"><div class="pl"><div class="tl">Moneda</div><div class="ts">Símbolo en montos y finanzas</div></div>
+        <select id="p-cur">${Object.keys(CURRENCIES).map(c => `<option value="${c}" ${cur===c?'selected':''}>${c} ${CURRENCIES[c]}</option>`).join('')}</select></div>
+      <div class="pref"><div class="pl"><div class="tl">Avisar por defecto</div><div class="ts">Días antes en cada Loop nuevo</div></div>
+        <input id="p-notify" type="number" min="0" max="60" value="${dn}" /></div>
+      <div class="pref"><div class="pl"><div class="tl">Pago automático por defecto</div><div class="ts">Loops nuevos marcados como auto</div></div>
+        <button type="button" class="switch ${da?'on':''}" id="p-auto" aria-label="Pago automático por defecto"></button></div>
+    </div>
+    <div class="brk"><h4>Avisos</h4>
+      <button class="opt" id="o-notify">${svg('bell')} ${pushEnabled() ? 'Avisos activados ✓ · reconfigurar' : 'Activar avisos push'}</button></div>
+    <div class="brk"><h4>Datos</h4>
+      <button class="opt" id="o-export">${svg('download')} Exportar copia de seguridad</button>
+      <button class="opt" id="o-import">${svg('upload')} Importar copia</button>
+      <button class="opt" id="o-install" hidden>${svg('smartphone')} Instalar como app</button>
+      <button class="opt danger" id="o-reset">${svg('rotate')} Restablecer datos de ejemplo</button></div>
+    <p class="sub" style="text-align:center;margin:18px 16px 0;font-size:12px">Loopapp · tus datos se guardan en este dispositivo</p>`;
+  v.querySelectorAll('.swatch').forEach(s => s.onclick = () => { applyTheme(s.dataset.theme); render(); });
+  v.querySelector('#p-cur').onchange = (e) => { setPref('currency', e.target.value); render(); };
+  v.querySelector('#p-notify').onchange = (e) => { setPref('defaultNotify', String(Math.max(0, Math.min(60, parseInt(e.target.value) || 0)))); };
+  const pa = v.querySelector('#p-auto'); pa.onclick = () => { const on = pref('defaultAuto','0') !== '1'; setPref('defaultAuto', on?'1':'0'); pa.classList.toggle('on', on); };
   v.querySelector('#o-notify').onclick = setupPush;
   v.querySelector('#o-export').onclick = exportData;
   v.querySelector('#o-import').onclick = () => document.getElementById('import-file').click();
-  v.querySelector('#o-about').onclick = () => alert('Loopapp — Todo lo que se repite, a la vista.\n\nSuscripciones, pagos, rutinas y recados con cuenta regresiva, prioridad y avisos.\nTus datos se guardan en este dispositivo.');
   v.querySelector('#o-reset').onclick = () => { if (confirm('¿Restablecer datos de ejemplo? (borra tus Loops actuales)')) { loops = seed(); save(); render(); } };
   const ib = v.querySelector('#o-install'); if (deferredPrompt) ib.hidden = false;
   ib.onclick = async () => { if (!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; ib.hidden = true; };
@@ -437,7 +495,7 @@ function renderAjustes(v) {
    ============================================================ */
 function openForm(loop) {
   const isEdit = !!loop;
-  const data = loop || { title:'', category:'subs', icon:'credit-card', amount:'', autoPay:false, recurrence:'monthly', nextDate: offsetDate(7), notifyDaysBefore: 3 };
+  const data = loop || { title:'', category:'subs', icon:'credit-card', amount:'', autoPay: pref('defaultAuto','0')==='1', recurrence:'monthly', nextDate: offsetDate(7), notifyDaysBefore: parseInt(pref('defaultNotify','3'),10) || 3 };
   const overlay = document.getElementById('modal-overlay'), modal = document.getElementById('modal');
   modal.innerHTML = `
     <h2>${isEdit ? 'Editar Loop' : 'Nuevo Loop'}</h2>
@@ -593,6 +651,7 @@ window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); defe
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
 /* ---------- Arranque ---------- */
+applyTheme(pref('theme', 'marfil'));
 // Inyecta los iconos SVG estáticos (☰ del header, + de Nuevo, logo del drawer)
 document.querySelectorAll('[data-ico]').forEach(el => el.insertAdjacentHTML('afterbegin', svg(el.dataset.ico)));
 render();
