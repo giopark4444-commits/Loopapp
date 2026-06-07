@@ -25,6 +25,8 @@ Abre `index.html` en un navegador (Chrome, Safari, Firefox) y pulsa
 - **Escalera de LEDs** con retención de pico (peak-hold).
 - **Osciloscopio / historial** estilo tubo de fósforo verde que traza el nivel
   de los últimos 30 segundos.
+- **Dosímetro de exposición** (criterio NIOSH): acumula la dosis de ruido y el
+  tiempo por encima de 85 dB, y avisa al alcanzar el límite diario seguro.
 - **Ponderación A / Z** — dB(A) aproxima la sensibilidad del oído humano;
   dB(Z) es respuesta plana.
 - **Modo de calibración**: introduce el valor de un sonómetro de referencia y

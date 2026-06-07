@@ -139,6 +139,21 @@
   .scope-label{ position:absolute; top:6px; left:9px; font-size:8px; letter-spacing:.2em;
     color:#3f7a52; font-weight:700;}
 
+  /* ======================= DOSÍMETRO ======================= */
+  .dose{ margin-top:12px; background:#1b1410; border-radius:10px; padding:9px 11px 10px;
+    border:1px solid #000; box-shadow:0 2px 5px rgba(0,0,0,.5) inset;}
+  .dose-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:7px;}
+  .dose-title{ font-size:9px; letter-spacing:.18em; color:#8a6f44; font-weight:700;}
+  .dose-pct{ font-family:"Courier New",monospace; font-weight:700; font-size:17px; color:#9fe6b0;
+    text-shadow:0 0 5px rgba(80,220,120,.4);}
+  .dose-bar{ height:9px; border-radius:5px; background:#0c1410; overflow:hidden;
+    box-shadow:0 1px 2px rgba(0,0,0,.6) inset;}
+  .dose-bar i{ display:block; height:100%; width:0%; border-radius:5px; background:var(--green);
+    transition:width .25s, background .25s;}
+  .dose-foot{ margin-top:6px; font-size:9px; letter-spacing:.06em; color:#5e8a6a; font-weight:600;}
+  .dose.warn .dose-pct{ color:#ff8a6a; text-shadow:0 0 6px rgba(255,90,50,.6);}
+  .dose.warn .dose-foot{ color:#e08a6a;}
+
   /* ======================= CONTROLES ======================= */
   .controls{ margin-top:16px; display:flex; gap:10px; align-items:center;}
   .btn{
@@ -261,6 +276,16 @@
     <div class="scope">
       <canvas id="scope"></canvas>
       <span class="scope-label">HISTORIAL · 30 s</span>
+    </div>
+
+    <!-- ===== DOSÍMETRO DE EXPOSICIÓN ===== -->
+    <div class="dose" id="dose">
+      <div class="dose-head">
+        <span class="dose-title">DOSIS DE EXPOSICIÓN</span>
+        <span class="dose-pct" id="dosePct">0%</span>
+      </div>
+      <div class="dose-bar"><i id="doseFill"></i></div>
+      <div class="dose-foot"><span id="doseMsg">Tiempo &gt;85 dB: 00:00</span></div>
     </div>
 
     <!-- ===== CONTROLES ===== -->
@@ -480,6 +505,35 @@
     sctx.stroke(); sctx.shadowBlur=0;
   }
   let peak=-Infinity, min=Infinity, sum=0, count=0, peakHold=DB_MIN, peakHoldT=0;
+  let dose=0, timeAbove=0, lastFrame=0;   // dosis NIOSH, segundos >85 dB
+
+  const elDosePct=document.getElementById('dosePct');
+  const elDoseFill=document.getElementById('doseFill');
+  const elDoseMsg=document.getElementById('doseMsg');
+  const elDose=document.getElementById('dose');
+
+  function accumulateDose(db){
+    const now=performance.now();
+    if(lastFrame){
+      const dt=Math.min((now-lastFrame)/1000, 0.5);   // s (acotado por si hubo pausa)
+      const allowed=28800*Math.pow(2,(85-db)/3);        // tiempo permitido NIOSH (s)
+      dose += dt/allowed;
+      if(db>=85) timeAbove+=dt;
+    }
+    lastFrame=now;
+  }
+  function fmtTime(s){
+    s=Math.floor(s); const m=Math.floor(s/60);
+    return String(m).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+  }
+  function updateDose(){
+    const pct=dose*100;
+    elDosePct.textContent = pct<1000 ? pct.toFixed(pct<10?1:0)+'%' : '999+%';
+    elDoseFill.style.width=Math.min(100,pct)+'%';
+    elDoseFill.style.background = pct>=100?'var(--red)':pct>=50?'var(--yellow)':'var(--green)';
+    elDose.classList.toggle('warn', pct>=100);
+    elDoseMsg.textContent='Tiempo >85 dB: '+fmtTime(timeAbove)+(pct>=100?' · ¡límite diario alcanzado!':'');
+  }
 
   // curva de ponderación A (ganancia en dB por frecuencia)
   function aWeight(f){
@@ -593,6 +647,10 @@
       leds[i].style.background = on ? leds[i].dataset.col : '#241a10';
     }
 
+    // dosis de exposición
+    accumulateDose(shown);
+    updateDose();
+
     // historial / osciloscopio
     pushHistory(shown);
     drawScope();
@@ -622,6 +680,7 @@
   function resetStats(){
     peak=-Infinity; min=Infinity; sum=0; count=0; peakHold=DB_MIN;
     elPeak.textContent='––'; elAvg.textContent='––'; elMin.textContent='––';
+    dose=0; timeAbove=0; lastFrame=0; updateDose();
     history.fill(null); drawScope();
   }
 
