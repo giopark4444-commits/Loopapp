@@ -24,6 +24,7 @@ const ICON = {
   rotate: '<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>',
   'chevron-left': '<polyline points="15 18 9 12 15 6"/>',
   'chevron-right': '<polyline points="9 18 15 12 9 6"/>',
+  'chevron-down': '<polyline points="6 9 12 15 18 9"/>',
   star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
   zap: '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
   'credit-card': '<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>',
@@ -59,7 +60,7 @@ function svg(name) { const i = ICON[name]; return i == null ? '' :
 function renderIcon(name) { return ICON[name] ? svg(name) : `<span class="emoji-ico">${escapeHtml(String(name || ''))}</span>`; }
 
 /* ---------- Categorías / recurrencia / estados ---------- */
-const CATEGORIES = {
+const BASE_CATEGORIES = {
   entertainment: { label: 'Entretenimiento', icon: 'tv' },
   subs:          { label: 'Suscripciones',    icon: 'credit-card' },
   services:      { label: 'Servicios',        icon: 'zap' },
@@ -75,8 +76,20 @@ const CATEGORIES = {
   routine:       { label: 'Rutinas / Tareas', icon: 'repeat' },
   other:         { label: 'Otros',            icon: 'star' },
 };
-// Migración de claves de categoría antiguas
 const CAT_MIGRATE = { money: 'services', vehicle: 'transport' };
+const USER_CATS_KEY = 'loopapp.cats';
+let CATEGORIES = {};
+function loadCategories() {
+  CATEGORIES = {};
+  Object.keys(BASE_CATEGORIES).filter(k => k !== 'other').forEach(k => CATEGORIES[k] = BASE_CATEGORIES[k]);
+  getUserCats().forEach(c => { if (c.key && c.label) CATEGORIES[c.key] = { label: c.label, icon: ICON[c.icon] ? c.icon : 'star', custom: true }; });
+  CATEGORIES.other = BASE_CATEGORIES.other;
+}
+function getUserCats() { try { return JSON.parse(localStorage.getItem(USER_CATS_KEY)) || []; } catch (e) { return []; } }
+function setUserCats(a) { localStorage.setItem(USER_CATS_KEY, JSON.stringify(a)); loadCategories(); }
+function addUserCat(label, icon) { const a = getUserCats(); a.push({ key: 'u_' + Date.now().toString(36), label: String(label).slice(0, 24), icon }); setUserCats(a); }
+function removeUserCat(key) { loops.forEach(l => { if (l.category === key) l.category = 'other'; }); save(); setUserCats(getUserCats().filter(c => c.key !== key)); }
+loadCategories();
 function catOf(loop) { return CATEGORIES[loop.category] || CATEGORIES.other; }
 const RECURRENCE = {
   none:      { label: 'Sin repetir',    perMonth: 0 },
@@ -99,7 +112,7 @@ const STATES = {
   ok:       { label: 'Al día',   color: '#5f8a55', order: 3 },
   neutral:  { label: 'Pendiente',color: '#5e7f9c', order: 4 },
 };
-const ICONS = ['credit-card','landmark','wallet','tv','music','cloud','smartphone','globe','zap','droplet','flame','home','car','bike','shield','file','key','dumbbell','pill','leaf','heart','book','gift','utensils','plane','trash'];
+const ICONS = ['star','credit-card','landmark','wallet','tv','music','cloud','smartphone','globe','zap','droplet','flame','home','car','bike','shield','file','key','wrench','briefcase','dumbbell','pill','leaf','heart','book','gift','utensils','plane','trash'];
 
 /* ---------- Estado de la app ---------- */
 let loops = load();
@@ -364,9 +377,10 @@ function renderInicio(v) {
   const monthly = loops.filter(l => (l.currency||def)===def).reduce((s,l) => s + monthlyCost(l), 0);
   const manuales = loops.filter(l => payType(l) !== 'auto').length;
   const seg = (k,t) => `<button class="${payFilter===k?'on':''}" data-pay="${k}">${t}</button>`;
-  const cchip = (key,label,icon) => `<button class="catchip ${activeCategory===key?'on':''}" data-cat="${key}">${icon ? svg(icon) : ''}<span>${label}</span></button>`;
-  let chips = cchip('all','Todos','list');
-  Object.keys(CATEGORIES).forEach(k => { if (loops.some(l => l.category === k)) chips += cchip(k, CATEGORIES[k].label, CATEGORIES[k].icon); });
+  const curCat = activeCategory === 'all' ? { label:'Todas las categorías', icon:'list' } : (CATEGORIES[activeCategory] || { label:'Todas las categorías', icon:'list' });
+  const catOpt = (key,label,icon) => `<button class="catopt ${activeCategory===key?'on':''}" data-cat="${key}">${svg(icon)} ${label}</button>`;
+  let catMenu = catOpt('all','Todas las categorías','list');
+  Object.keys(CATEGORIES).forEach(k => { catMenu += catOpt(k, CATEGORIES[k].label, CATEGORIES[k].icon); });
 
   v.innerHTML = `
     <div class="sum">
@@ -375,12 +389,17 @@ function renderInicio(v) {
       <span><b>${money0(monthly, def)}</b> / mes</span>
       <span><b>${manuales}</b> manuales</span>
     </div>
-    <div class="cats">${chips}</div>
+    <div class="catbar">
+      <button class="catsel" id="catsel" aria-haspopup="true">${svg(curCat.icon)}<span>${curCat.label}</span>${svg('chevron-down')}</button>
+      <div class="catmenu" id="catmenu" hidden>${catMenu}</div>
+    </div>
     <div class="seg">${seg('all','Todos')}${seg('manual','Manuales')}${seg('auto','Automáticos')}</div>
     <input id="search" class="search-input" type="search" placeholder="Buscar Loop…" autocomplete="off" value="${escapeAttr(searchQuery)}" />
     <div class="list" id="list"></div>`;
 
-  v.querySelectorAll('.catchip').forEach(b => b.onclick = () => { activeCategory = b.dataset.cat; render(); });
+  const catsel = v.querySelector('#catsel'), catmenu = v.querySelector('#catmenu');
+  catsel.onclick = (e) => { e.stopPropagation(); catmenu.hidden = !catmenu.hidden; };
+  catmenu.querySelectorAll('.catopt').forEach(b => b.onclick = () => { activeCategory = b.dataset.cat; render(); });
   v.querySelectorAll('.seg button').forEach(b => b.onclick = () => { payFilter = b.dataset.pay; render(); });
   const s = v.querySelector('#search');
   s.oninput = (e) => { searchQuery = e.target.value.trim().toLowerCase(); renderList(); };
@@ -607,6 +626,12 @@ function renderAjustes(v) {
       <div class="pref"><div class="pl"><div class="tl">Pago automático por defecto</div><div class="ts">Loops nuevos marcados como auto</div></div>
         <button type="button" class="switch ${da?'on':''}" id="p-auto" aria-label="Pago automático por defecto"></button></div>
     </div>
+    <div class="brk"><h4>Categorías</h4>
+      <div class="catlist">
+        ${Object.keys(CATEGORIES).map(k => `<div class="catrow">${svg(CATEGORIES[k].icon)}<span>${CATEGORIES[k].label}</span>${CATEGORIES[k].custom ? `<button class="catdel" data-cat="${k}" aria-label="Eliminar">${svg('trash')}</button>` : ''}</div>`).join('')}
+      </div>
+      <button class="opt" id="o-addcat">${svg('plus')} Agregar categoría</button>
+    </div>
     <div class="brk"><h4>Avisos</h4>
       <button class="opt" id="o-notify">${svg('bell')} ${pushEnabled() ? 'Avisos activados ✓ · reconfigurar' : 'Activar avisos push'}</button></div>
     <div class="brk"><h4>Calendario</h4>
@@ -622,6 +647,8 @@ function renderAjustes(v) {
   v.querySelector('#p-cur').onchange = (e) => { setPref('currency', e.target.value); render(); };
   v.querySelector('#p-notify').onchange = (e) => { setPref('defaultNotify', String(Math.max(0, Math.min(60, parseInt(e.target.value) || 0)))); };
   const pa = v.querySelector('#p-auto'); pa.onclick = () => { const on = pref('defaultAuto','0') !== '1'; setPref('defaultAuto', on?'1':'0'); pa.classList.toggle('on', on); };
+  v.querySelectorAll('.catdel').forEach(b => b.onclick = () => { if (confirm('¿Eliminar esta categoría? Los loops que la usen pasarán a "Otros".')) { removeUserCat(b.dataset.cat); render(); } });
+  v.querySelector('#o-addcat').onclick = openCatForm;
   v.querySelector('#o-ics').onclick = () => { if (!loops.length) { alert('No hay Loops que exportar.'); return; } downloadICS(loops, 'loopapp'); };
   v.querySelector('#o-notify').onclick = setupPush;
   v.querySelector('#o-export').onclick = exportData;
@@ -717,6 +744,33 @@ function openForm(loop) {
   };
 }
 
+/* ---------- Crear categoría personalizada ---------- */
+function openCatForm() {
+  const overlay = document.getElementById('modal-overlay'), modal = document.getElementById('modal');
+  let selIcon = 'star';
+  modal.innerHTML = `
+    <h2>Nueva categoría</h2>
+    <p class="modal-sub">Crea una categoría a tu medida.</p>
+    <div class="field"><label>Nombre</label><input id="c-name" placeholder="Ej. Mascotas, Educación, Donaciones" maxlength="24" /></div>
+    <div class="field"><label>Icono</label><div class="icon-picker" id="c-icons">
+      ${ICONS.map(i => `<button data-icon="${i}" class="${i==='star'?'sel':''}">${svg(i)}</button>`).join('')}
+    </div></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="c-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="c-save">Crear</button>
+    </div>`;
+  overlay.hidden = false;
+  modal.querySelectorAll('#c-icons button').forEach(b => b.onclick = () => { selIcon = b.dataset.icon; modal.querySelectorAll('#c-icons button').forEach(x => x.classList.remove('sel')); b.classList.add('sel'); });
+  const close = () => { overlay.hidden = true; };
+  modal.querySelector('#c-cancel').onclick = close;
+  overlay.onclick = (e) => { if (e.target === overlay) close(); };
+  modal.querySelector('#c-save').onclick = () => {
+    const name = modal.querySelector('#c-name').value.trim();
+    if (!name) { modal.querySelector('#c-name').focus(); return; }
+    addUserCat(name, selIcon); close(); render();
+  };
+}
+
 /* ---------- Helpers HTML-safe ---------- */
 function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
 function escapeAttr(s) { return escapeHtml(s); }
@@ -728,6 +782,10 @@ document.getElementById('add-btn').onclick = () => openForm(null);
 document.getElementById('menu-toggle').onclick = openDrawer;
 document.getElementById('scrim').onclick = closeDrawer;
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeDrawer(); } });
+document.addEventListener('click', (e) => {
+  const m = document.getElementById('catmenu'), s = document.getElementById('catsel');
+  if (m && !m.hidden && s && !m.contains(e.target) && !s.contains(e.target)) m.hidden = true;
+});
 
 /* Importar respaldo */
 const importFile = document.getElementById('import-file');
