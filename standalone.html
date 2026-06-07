@@ -578,10 +578,7 @@ function monthlyCost(loop) {
   if (!loop.amount) return 0;
   return loop.amount * (RECURRENCE[loop.recurrence]?.perMonth || 0);
 }
-function money(n) { return '
-</body>
-</html>
- + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function money(n) { return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
 /* ============================================================
    Acciones
