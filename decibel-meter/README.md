@@ -27,6 +27,8 @@ Abre `index.html` en un navegador (Chrome, Safari, Firefox) y pulsa
   de los últimos 30 segundos.
 - **Dosímetro de exposición** (criterio NIOSH): acumula la dosis de ruido y el
   tiempo por encima de 85 dB, y avisa al alcanzar el límite diario seguro.
+- **Temas de carátula** intercambiables (Marfil clásico, Negra ámbar, Azul
+  nocturno); la preferencia se guarda en `localStorage`.
 - **Ponderación A / Z** — dB(A) aproxima la sensibilidad del oído humano;
   dB(Z) es respuesta plana.
 - **Modo de calibración**: introduce el valor de un sonómetro de referencia y

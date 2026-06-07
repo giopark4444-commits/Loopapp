@@ -19,6 +19,26 @@
     --bezel-2:#332518;
     --brass:#b8893b;
     --brass-light:#e8c884;
+    /* variables de carátula (tematizables) */
+    --face-hi:#fbf2d8; --face:#f3e7c8; --face-lo:#e6d5a8;
+    --tick:#3a2a16; --tick-red:#9a2b1c;
+    --units:#7a6033; --wlabel:#9a7c4a;
+    --needle-dark:#1c140a; --needle-red:#c0392b;
+    --lcd:#ffc15e; --lcd-glow:rgba(255,170,70,.55);
+  }
+  html[data-theme="noir"]{
+    --face-hi:#3c3c42; --face:#242428; --face-lo:#141417;
+    --tick:#e8a13a; --tick-red:#ff7043;
+    --units:#b88a3a; --wlabel:#c8923a;
+    --needle-dark:#f0e0c0; --needle-red:#ff5a3c;
+    --lcd:#ffc15e; --lcd-glow:rgba(255,170,70,.55);
+  }
+  html[data-theme="nocturne"]{
+    --face-hi:#2c3e66; --face:#1a2742; --face-lo:#0f1a30;
+    --tick:#a8c8ff; --tick-red:#ff9a7a;
+    --units:#6f9ad6; --wlabel:#7fa8d8;
+    --needle-dark:#dfeaff; --needle-red:#ff7a5a;
+    --lcd:#7fd4ff; --lcd-glow:rgba(90,180,255,.55);
   }
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body{ height:100%; margin:0; }
@@ -73,7 +93,7 @@
   .meter-face{
     position:relative; border-radius:14px; overflow:hidden;
     background:
-      radial-gradient(120% 130% at 50% 8%, #fbf2d8 0%, var(--ivory) 42%, var(--ivory-dark) 100%);
+      radial-gradient(120% 130% at 50% 8%, var(--face-hi) 0%, var(--face) 42%, var(--face-lo) 100%);
     border:2px solid #0c0905;
     box-shadow:0 0 0 5px #241a0e, 0 8px 18px rgba(0,0,0,.5) inset, 0 2px 4px rgba(0,0,0,.6);
     padding:6px 6px 0;
@@ -86,9 +106,16 @@
     mix-blend-mode:screen;
   }
   .units{ position:absolute; left:50%; transform:translateX(-50%); bottom:30px;
-    font-size:10px; letter-spacing:.34em; color:#7a6033; font-weight:700; padding-left:.34em;}
+    font-size:10px; letter-spacing:.34em; color:var(--units); font-weight:700; padding-left:.34em;}
   .wlabel{ position:absolute; top:10px; right:14px; font-size:9px; letter-spacing:.18em;
-    color:#9a7c4a; font-weight:700;}
+    color:var(--wlabel); font-weight:700;}
+  /* ticks, etiquetas y aguja siguen el tema */
+  #dial .tk{ stroke:var(--tick); }
+  #dial .tk.red{ stroke:var(--tick-red); }
+  #dial .lb{ fill:var(--tick); }
+  #dial .lb.red{ fill:var(--tick-red); }
+  #dial #needle line{ stroke:var(--needle-dark); }
+  #dial #needle line.nred{ stroke:var(--needle-red); }
 
   /* ======================= LECTOR DIGITAL ======================= */
   .readout{
@@ -104,8 +131,8 @@
     background:repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 2px, transparent 2px 4px); pointer-events:none;}
   .lcd .big{
     font-family:"Courier New",monospace; font-weight:700; font-size:46px; line-height:1;
-    color:var(--amber-glow);
-    text-shadow:0 0 6px rgba(255,180,80,.85), 0 0 18px rgba(255,150,40,.45);
+    color:var(--lcd);
+    text-shadow:0 0 6px var(--lcd-glow), 0 0 18px var(--lcd-glow);
     letter-spacing:1px;
   }
   .lcd .big .u{ font-size:16px; margin-left:6px; opacity:.85; letter-spacing:1px;}
@@ -170,7 +197,14 @@
   .btn.ghost{ background:linear-gradient(180deg,#403122,#2c2014); color:var(--brass-light); box-shadow:0 2px 0 #160f08, 0 4px 8px rgba(0,0,0,.4), 0 1px 0 rgba(255,255,255,.08) inset; flex:.85;}
 
   /* fila inferior: ponderación + LED de encendido */
-  .strip{ margin-top:12px; display:flex; align-items:center; gap:12px; justify-content:space-between;}
+  .strip{ margin-top:12px; display:flex; align-items:center; gap:10px; justify-content:space-between; flex-wrap:wrap;}
+  .themes{ display:flex; gap:7px; }
+  .sw{ width:24px; height:24px; border-radius:50%; cursor:pointer; padding:0;
+    border:2px solid #160f08;
+    background:linear-gradient(135deg, var(--s1) 0 50%, var(--s2) 50% 100%);
+    box-shadow:0 1px 3px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.15) inset; transition:transform .08s;}
+  .sw:active{ transform:scale(.92); }
+  .sw.sel{ outline:2px solid var(--brass-light); outline-offset:2px; }
   .toggle{ display:flex; background:#1b1410; border-radius:9px; padding:3px; gap:2px; border:1px solid #000;
     box-shadow:0 2px 4px rgba(0,0,0,.5) inset;}
   .toggle button{ border:none; background:transparent; color:#8a6f44; font-weight:700; font-size:11px;
@@ -240,7 +274,7 @@
         <!-- aguja -->
         <g id="needle">
           <line x1="200" y1="210" x2="200" y2="40" stroke="#1c140a" stroke-width="3.2" stroke-linecap="round"/>
-          <line x1="200" y1="210" x2="200" y2="40" stroke="#c0392b" stroke-width="1.4" stroke-linecap="round"/>
+          <line class="nred" x1="200" y1="210" x2="200" y2="40" stroke="#c0392b" stroke-width="1.4" stroke-linecap="round"/>
           <line x1="200" y1="210" x2="200" y2="232" stroke="#1c140a" stroke-width="4.5" stroke-linecap="round"/>
         </g>
         <!-- tornillo central / pivote -->
@@ -299,6 +333,11 @@
       <div class="toggle" id="weighting">
         <button data-w="A" class="sel">A</button>
         <button data-w="Z">Z</button>
+      </div>
+      <div class="themes" id="themes" title="Tema de la carátula">
+        <button data-theme="classic" class="sw sel" style="--s1:#f3e7c8;--s2:#b8893b" aria-label="Marfil clásico"></button>
+        <button data-theme="noir" class="sw" style="--s1:#242428;--s2:#e8a13a" aria-label="Negra ámbar"></button>
+        <button data-theme="nocturne" class="sw" style="--s1:#1a2742;--s2:#7fd4ff" aria-label="Azul nocturno"></button>
       </div>
       <div class="powerled" id="powerled"><span class="dot"></span>POWER</div>
     </div>
@@ -407,7 +446,7 @@
     const l=document.createElementNS(NS,'line');
     l.setAttribute('x1',x0);l.setAttribute('y1',y0);
     l.setAttribute('x2',x1);l.setAttribute('y2',y1);
-    l.setAttribute('stroke', db>=100?'#9a2b1c':'#3a2a16');
+    l.setAttribute('class', db>=100?'tk red':'tk');
     l.setAttribute('stroke-width', major?2.4:1.2);
     ticksG.appendChild(l);
     if(major){
@@ -417,7 +456,7 @@
       t.setAttribute('text-anchor','middle');
       t.setAttribute('font-size','15');
       t.setAttribute('font-weight','700');
-      t.setAttribute('fill', db>=100?'#9a2b1c':'#3a2a16');
+      t.setAttribute('class', db>=100?'lb red':'lb');
       t.textContent=db;
       labelsG.appendChild(t);
     }
@@ -690,6 +729,17 @@
     resetStats();
     if(running){ elDesc.textContent='estadísticas reiniciadas'; }
   });
+
+  // ===== selector de temas de carátula =====
+  function applyTheme(name){
+    document.documentElement.dataset.theme = name==='classic'?'':name;
+    document.querySelectorAll('#themes .sw').forEach(s=>s.classList.toggle('sel', s.dataset.theme===name));
+    localStorage.setItem('vusono.theme', name);
+  }
+  document.querySelectorAll('#themes .sw').forEach(s=>{
+    s.addEventListener('click', ()=>applyTheme(s.dataset.theme));
+  });
+  applyTheme(localStorage.getItem('vusono.theme') || 'classic');
 
   document.querySelectorAll('#weighting button').forEach(b=>{
     b.addEventListener('click', ()=>{
