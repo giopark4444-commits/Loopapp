@@ -376,7 +376,7 @@ function renderInicio(v) {
   const overdue = loops.filter(l => statusOf(l)==='overdue').length;
   const urgent = loops.filter(l => statusOf(l)==='urgent').length;
   const monthly = loops.filter(l => (l.currency||def)===def).reduce((s,l) => s + monthlyCost(l), 0);
-  const manuales = loops.filter(l => payType(l) !== 'auto').length;
+  const manuales = loops.filter(l => payType(l) === 'manual').length;
   const seg = (k,t) => `<button class="${payFilter===k?'on':''}" data-pay="${k}">${t}</button>`;
   const curCat = activeCategory === 'all' ? { label:'Todas las categorías', icon:'list' } : (CATEGORIES[activeCategory] || { label:'Todas las categorías', icon:'list' });
   const catOpt = (key,label,icon) => `<button class="catopt ${activeCategory===key?'on':''}" data-cat="${key}">${svg(icon)} ${label}</button>`;
