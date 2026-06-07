@@ -371,6 +371,45 @@ body { -webkit-tap-highlight-color: transparent; }
   #app { margin-left: 300px; margin-right: auto; }
 }
 
+/* ===========================================================
+   Selector de diseño (Ajustes)
+   =========================================================== */
+.layouts { display: flex; gap: 8px; }
+.lay { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 13px; padding: 14px 8px; cursor: pointer; font-family: inherit; font-size: 12.5px; font-weight: 600; color: var(--text); }
+.lay svg { width: 20px; height: 20px; color: var(--dim); }
+.lay.sel { border-color: var(--accent); background: var(--accent-tint); color: var(--accent); }
+.lay.sel svg { color: var(--accent); }
+
+/* ===========================================================
+   Diseño: Cómodo (elementos más grandes)
+   =========================================================== */
+body[data-layout="comfy"] .row { padding: 18px 14px; gap: 14px; }
+body[data-layout="comfy"] .row .ic { width: 46px; height: 46px; border-radius: 13px; }
+body[data-layout="comfy"] .row .ic svg { width: 23px; height: 23px; }
+body[data-layout="comfy"] .row .mid .t { font-size: 17px; }
+body[data-layout="comfy"] .row .mid .m { font-size: 13px; }
+body[data-layout="comfy"] .row .right .cd { font-size: 25px; }
+body[data-layout="comfy"] .rowbar { height: 9px; }
+body[data-layout="comfy"] .chk { width: 34px; height: 34px; }
+body[data-layout="comfy"] .chk svg { width: 18px; height: 18px; }
+body[data-layout="comfy"] .newbtn { padding: 11px 18px; font-size: 15px; }
+body[data-layout="comfy"] .catsel { padding: 14px 16px; font-size: 15.5px; }
+body[data-layout="comfy"] .seg button { padding: 11px 18px; font-size: 14px; }
+body[data-layout="comfy"] .search-input { padding: 14px 16px 14px 44px; font-size: 16px; }
+body[data-layout="comfy"] .btn { padding: 16px; font-size: 16px; }
+body[data-layout="comfy"] .fa-btn { padding: 14px; font-size: 14px; }
+body[data-layout="comfy"] .opt { padding: 16px 4px; font-size: 15.5px; }
+body[data-layout="comfy"] .nav a { padding: 14px 12px; font-size: 16px; }
+body[data-layout="comfy"] .dd-add { padding: 9px 14px; font-size: 13.5px; }
+
+/* ===========================================================
+   Diseño: Tarjetas (vista visual)
+   =========================================================== */
+body[data-layout="cards"] .list { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin: 10px 14px 0; }
+body[data-layout="cards"] .row { border: 1px solid var(--line); border-radius: 16px; background: var(--panel); padding: 15px; box-shadow: var(--shadow); }
+body[data-layout="cards"] .row:active { background: var(--panel); }
+
 </style>
 </head>
 <body>
@@ -690,6 +729,12 @@ function applyTheme(name) {
   setPref('theme', t);
   const m = document.querySelector('meta[name="theme-color"]');
   if (m) m.content = (THEMES.find(x => x.key === t) || {}).bg || '#f6f4ef';
+}
+const LAYOUTS = [{ key:'list', label:'Lista', icon:'list' }, { key:'comfy', label:'Cómodo', icon:'menu' }, { key:'cards', label:'Tarjetas', icon:'grid' }];
+function applyLayout(name) {
+  const l = LAYOUTS.find(x => x.key === name) ? name : 'list';
+  document.body.dataset.layout = l;
+  setPref('layout', l);
 }
 
 /* ---------- Color de celda del calendario (dividido si hay varias) ---------- */
@@ -1145,7 +1190,7 @@ function fmtNice(ds) { try { return parseDate(ds).toLocaleDateString('es', { day
 
 /* ---------- AJUSTES ---------- */
 function renderAjustes(v) {
-  const cur = pref('currency','USD'), dn = pref('defaultNotify','3'), da = pref('defaultAuto','0')==='1', theme = pref('theme','marfil');
+  const cur = pref('currency','USD'), dn = pref('defaultNotify','3'), da = pref('defaultAuto','0')==='1', theme = pref('theme','marfil'), lay = pref('layout','list');
   v.innerHTML = `
     <div class="sec-title">Ajustes</div>
     <div class="themes">
@@ -1153,6 +1198,12 @@ function renderAjustes(v) {
       <div class="swatches">
         ${THEMES.map(t => `<div class="swatch ${theme===t.key?'sel':''}" data-theme="${t.key}">
           <div class="sw" style="background:${t.bg};--swa:${t.sw}"></div><div class="lb">${t.label}</div></div>`).join('')}
+      </div>
+    </div>
+    <div class="themes">
+      <h4>Diseño</h4>
+      <div class="layouts">
+        ${LAYOUTS.map(o => `<button class="lay ${lay===o.key?'sel':''}" data-lay="${o.key}">${svg(o.icon)}<span>${o.label}</span></button>`).join('')}
       </div>
     </div>
     <div class="brk"><h4>Preferencias</h4>
@@ -1193,6 +1244,7 @@ function renderAjustes(v) {
       <button class="opt danger" id="o-reset">${svg('rotate')} Restablecer datos de ejemplo</button></div>
     <p class="sub" style="text-align:center;margin:18px 16px 0;font-size:12px">Loopapp · tus datos se guardan en este dispositivo</p>`;
   v.querySelectorAll('.swatch').forEach(s => s.onclick = () => { applyTheme(s.dataset.theme); render(); });
+  v.querySelectorAll('.lay').forEach(b => b.onclick = () => { applyLayout(b.dataset.lay); render(); });
   v.querySelector('#p-cur').onchange = (e) => { setPref('currency', e.target.value); render(); };
   v.querySelector('#p-notify').onchange = (e) => { setPref('defaultNotify', String(Math.max(0, Math.min(60, parseInt(e.target.value) || 0)))); };
   const pa = v.querySelector('#p-auto'); pa.onclick = () => { const on = pref('defaultAuto','0') !== '1'; setPref('defaultAuto', on?'1':'0'); pa.classList.toggle('on', on); };
@@ -1500,6 +1552,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catc
 
 /* ---------- Arranque ---------- */
 applyTheme(pref('theme', (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'noche' : 'marfil'));
+applyLayout(pref('layout', 'list'));
 // Inyecta los iconos SVG estáticos (☰ del header, + de Nuevo, logo del drawer)
 document.querySelectorAll('[data-ico]').forEach(el => el.insertAdjacentHTML('afterbegin', svg(el.dataset.ico)));
 render();

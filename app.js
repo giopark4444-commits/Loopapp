@@ -271,6 +271,12 @@ function applyTheme(name) {
   const m = document.querySelector('meta[name="theme-color"]');
   if (m) m.content = (THEMES.find(x => x.key === t) || {}).bg || '#f6f4ef';
 }
+const LAYOUTS = [{ key:'list', label:'Lista', icon:'list' }, { key:'comfy', label:'Cómodo', icon:'menu' }, { key:'cards', label:'Tarjetas', icon:'grid' }];
+function applyLayout(name) {
+  const l = LAYOUTS.find(x => x.key === name) ? name : 'list';
+  document.body.dataset.layout = l;
+  setPref('layout', l);
+}
 
 /* ---------- Color de celda del calendario (dividido si hay varias) ---------- */
 function cellBg(colors) {
@@ -725,7 +731,7 @@ function fmtNice(ds) { try { return parseDate(ds).toLocaleDateString('es', { day
 
 /* ---------- AJUSTES ---------- */
 function renderAjustes(v) {
-  const cur = pref('currency','USD'), dn = pref('defaultNotify','3'), da = pref('defaultAuto','0')==='1', theme = pref('theme','marfil');
+  const cur = pref('currency','USD'), dn = pref('defaultNotify','3'), da = pref('defaultAuto','0')==='1', theme = pref('theme','marfil'), lay = pref('layout','list');
   v.innerHTML = `
     <div class="sec-title">Ajustes</div>
     <div class="themes">
@@ -733,6 +739,12 @@ function renderAjustes(v) {
       <div class="swatches">
         ${THEMES.map(t => `<div class="swatch ${theme===t.key?'sel':''}" data-theme="${t.key}">
           <div class="sw" style="background:${t.bg};--swa:${t.sw}"></div><div class="lb">${t.label}</div></div>`).join('')}
+      </div>
+    </div>
+    <div class="themes">
+      <h4>Diseño</h4>
+      <div class="layouts">
+        ${LAYOUTS.map(o => `<button class="lay ${lay===o.key?'sel':''}" data-lay="${o.key}">${svg(o.icon)}<span>${o.label}</span></button>`).join('')}
       </div>
     </div>
     <div class="brk"><h4>Preferencias</h4>
@@ -773,6 +785,7 @@ function renderAjustes(v) {
       <button class="opt danger" id="o-reset">${svg('rotate')} Restablecer datos de ejemplo</button></div>
     <p class="sub" style="text-align:center;margin:18px 16px 0;font-size:12px">Loopapp · tus datos se guardan en este dispositivo</p>`;
   v.querySelectorAll('.swatch').forEach(s => s.onclick = () => { applyTheme(s.dataset.theme); render(); });
+  v.querySelectorAll('.lay').forEach(b => b.onclick = () => { applyLayout(b.dataset.lay); render(); });
   v.querySelector('#p-cur').onchange = (e) => { setPref('currency', e.target.value); render(); };
   v.querySelector('#p-notify').onchange = (e) => { setPref('defaultNotify', String(Math.max(0, Math.min(60, parseInt(e.target.value) || 0)))); };
   const pa = v.querySelector('#p-auto'); pa.onclick = () => { const on = pref('defaultAuto','0') !== '1'; setPref('defaultAuto', on?'1':'0'); pa.classList.toggle('on', on); };
@@ -1080,6 +1093,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catc
 
 /* ---------- Arranque ---------- */
 applyTheme(pref('theme', (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'noche' : 'marfil'));
+applyLayout(pref('layout', 'list'));
 // Inyecta los iconos SVG estáticos (☰ del header, + de Nuevo, logo del drawer)
 document.querySelectorAll('[data-ico]').forEach(el => el.insertAdjacentHTML('afterbegin', svg(el.dataset.ico)));
 render();

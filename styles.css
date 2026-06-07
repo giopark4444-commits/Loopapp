@@ -362,3 +362,42 @@ body { -webkit-tap-highlight-color: transparent; }
 @media (min-width: 1320px) {
   #app { margin-left: 300px; margin-right: auto; }
 }
+
+/* ===========================================================
+   Selector de diseño (Ajustes)
+   =========================================================== */
+.layouts { display: flex; gap: 8px; }
+.lay { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 13px; padding: 14px 8px; cursor: pointer; font-family: inherit; font-size: 12.5px; font-weight: 600; color: var(--text); }
+.lay svg { width: 20px; height: 20px; color: var(--dim); }
+.lay.sel { border-color: var(--accent); background: var(--accent-tint); color: var(--accent); }
+.lay.sel svg { color: var(--accent); }
+
+/* ===========================================================
+   Diseño: Cómodo (elementos más grandes)
+   =========================================================== */
+body[data-layout="comfy"] .row { padding: 18px 14px; gap: 14px; }
+body[data-layout="comfy"] .row .ic { width: 46px; height: 46px; border-radius: 13px; }
+body[data-layout="comfy"] .row .ic svg { width: 23px; height: 23px; }
+body[data-layout="comfy"] .row .mid .t { font-size: 17px; }
+body[data-layout="comfy"] .row .mid .m { font-size: 13px; }
+body[data-layout="comfy"] .row .right .cd { font-size: 25px; }
+body[data-layout="comfy"] .rowbar { height: 9px; }
+body[data-layout="comfy"] .chk { width: 34px; height: 34px; }
+body[data-layout="comfy"] .chk svg { width: 18px; height: 18px; }
+body[data-layout="comfy"] .newbtn { padding: 11px 18px; font-size: 15px; }
+body[data-layout="comfy"] .catsel { padding: 14px 16px; font-size: 15.5px; }
+body[data-layout="comfy"] .seg button { padding: 11px 18px; font-size: 14px; }
+body[data-layout="comfy"] .search-input { padding: 14px 16px 14px 44px; font-size: 16px; }
+body[data-layout="comfy"] .btn { padding: 16px; font-size: 16px; }
+body[data-layout="comfy"] .fa-btn { padding: 14px; font-size: 14px; }
+body[data-layout="comfy"] .opt { padding: 16px 4px; font-size: 15.5px; }
+body[data-layout="comfy"] .nav a { padding: 14px 12px; font-size: 16px; }
+body[data-layout="comfy"] .dd-add { padding: 9px 14px; font-size: 13.5px; }
+
+/* ===========================================================
+   Diseño: Tarjetas (vista visual)
+   =========================================================== */
+body[data-layout="cards"] .list { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin: 10px 14px 0; }
+body[data-layout="cards"] .row { border: 1px solid var(--line); border-radius: 16px; background: var(--panel); padding: 15px; box-shadow: var(--shadow); }
+body[data-layout="cards"] .row:active { background: var(--panel); }
