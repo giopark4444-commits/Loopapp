@@ -194,11 +194,36 @@ function cellBg(colors) {
 }
 
 /* ---------- Acciones ---------- */
+const DONE_KEY = 'loopapp.done';
+function getDone() { try { return JSON.parse(localStorage.getItem(DONE_KEY)) || []; } catch (e) { return []; } }
+function setDone(log) { localStorage.setItem(DONE_KEY, JSON.stringify(log)); }
+function logDone(loop) {
+  const log = getDone();
+  log.push({ id: loop.id, title: loop.title, icon: loop.icon, amount: loop.amount, category: loop.category,
+    recurrence: loop.recurrence, notifyDaysBefore: loop.notifyDaysBefore, autoPay: !!loop.autoPay, date: loop.nextDate, ts: Date.now() });
+  setDone(log);
+}
 function markDone(id) {
   const loop = loops.find(l => l.id === id); if (!loop) return;
+  logDone(loop);
   const next = nextCycle(loop.nextDate, loop.recurrence);
   loop.history = loop.history || []; loop.history.push(loop.nextDate);
   if (next) loop.nextDate = next; else loops = loops.filter(l => l.id !== id);
+  save(); render();
+}
+/* Restaurar un check (deshacer): regresa el Loop a su fecha original */
+function restoreDone(ts) {
+  const log = getDone(); const i = log.findIndex(e => e.ts === ts); if (i < 0) return;
+  const e = log[i];
+  const existing = loops.find(l => l.id === e.id);
+  if (existing) {
+    existing.nextDate = e.date; // recurrente: regresa la fecha
+    if (existing.history) { const hi = existing.history.lastIndexOf(e.date); if (hi >= 0) existing.history.splice(hi, 1); }
+  } else {
+    loops.push({ id: e.id || uid(), title: e.title, icon: e.icon, amount: e.amount, category: CATEGORIES[e.category] ? e.category : 'routine',
+      recurrence: RECURRENCE[e.recurrence] ? e.recurrence : 'none', nextDate: e.date, notifyDaysBefore: e.notifyDaysBefore ?? 3, autoPay: !!e.autoPay, history: [] });
+  }
+  log.splice(i, 1); setDone(log);
   save(); render();
 }
 function upsertLoop(data) {
@@ -216,7 +241,7 @@ const SECTIONS = [
   { key: 'calendario',icon: 'calendar', label: 'Calendario' },
   { key: 'finanzas',  icon: 'wallet',   label: 'Finanzas' },
   { key: 'stats',     icon: 'bars',     label: 'Estadísticas' },
-  { key: 'historial', icon: 'checksq',  label: 'Historial de pagos' },
+  { key: 'historial', icon: 'checksq',  label: 'Completados' },
 ];
 function renderNav() {
   const nav = document.getElementById('nav');
@@ -411,7 +436,7 @@ function renderStats(v) {
   const alDia = counts.ok + counts.neutral;
   const pctOk = total ? Math.round(alDia/total*100) : 0;
   const pendientes = counts.overdue + counts.urgent + counts.upcoming;
-  const pagados = loops.reduce((s,l) => s + (l.history ? l.history.length : 0), 0);
+  const pagados = getDone().length;
   const manualesPend = loops.filter(l => payType(l)!=='auto' && ['overdue','urgent','upcoming'].includes(statusOf(l))).length;
   v.innerHTML = `
     <div class="sec-title">Estadísticas</div>
@@ -420,7 +445,7 @@ function renderStats(v) {
       <div class="stat"><div class="n" style="color:var(--overdue)">${counts.overdue}</div><div class="t">vencidos</div></div>
       <div class="stat"><div class="n">${pendientes}</div><div class="t">pendientes</div></div>
       <div class="stat"><div class="n">${manualesPend}</div><div class="t">manuales por pagar</div></div>
-      <div class="stat"><div class="n">${pagados}</div><div class="t">pagos registrados</div></div>
+      <div class="stat"><div class="n">${pagados}</div><div class="t">completados</div></div>
       <div class="stat"><div class="n">${total}</div><div class="t">loops activos</div></div>
     </div>
     <div class="brk"><h4>Por estado</h4>
@@ -431,22 +456,23 @@ function renderStats(v) {
 
 /* ---------- HISTORIAL ---------- */
 function renderHistorial(v) {
-  const items = [];
-  loops.forEach(l => (l.history || []).forEach(date => items.push({ title: l.title, icon: l.icon, amount: l.amount, date })));
-  items.sort((a,b) => b.date.localeCompare(a.date));
+  const items = getDone().slice().sort((a,b) => b.ts - a.ts);
   if (!items.length) {
-    v.innerHTML = `<div class="sec-title">Historial de pagos</div>
+    v.innerHTML = `<div class="sec-title">Completados</div>
       <div class="empty"><div class="em">${svg('checksq')}</div><h3>Aún sin registros</h3>
-      <p>Cuando marques algo como pagado/hecho, aparecerá aquí.</p></div>`;
+      <p>Cuando marques algo como pagado/hecho aparecerá aquí, y podrás restaurarlo.</p></div>`;
     return;
   }
   const rows = items.map(it => `
-    <div class="row" style="--st:var(--ok)">
-      <span class="ic">${renderIcon(it.icon || 'check')}</span>
-      <div class="mid"><div class="t">${escapeHtml(it.title)}</div><div class="m">${fmtNice(it.date)}</div></div>
-      <div class="right">${it.amount ? `<div class="amt">${money(it.amount)}</div>` : svg('check')}</div>
+    <div class="row">
+      <div class="row-top">
+        <span class="ic">${renderIcon(it.icon || 'check')}</span>
+        <div class="mid"><div class="t">${escapeHtml(it.title)}</div><div class="m">${fmtNice(it.date)}${it.amount ? ' · ' + money(it.amount) : ''}</div></div>
+        <button class="undo-btn" data-ts="${it.ts}" title="Restaurar">${svg('rotate')}</button>
+      </div>
     </div>`).join('');
-  v.innerHTML = `<div class="sec-title">Historial de pagos</div><div class="sub">${items.length} registro${items.length>1?'s':''}</div><div class="list">${rows}</div>`;
+  v.innerHTML = `<div class="sec-title">Completados</div><div class="sub">${items.length} registro${items.length>1?'s':''} · toca ↩ para restaurar</div><div class="list">${rows}</div>`;
+  v.querySelectorAll('.undo-btn').forEach(b => b.onclick = () => restoreDone(Number(b.dataset.ts)));
 }
 function fmtNice(ds) { try { return parseDate(ds).toLocaleDateString('es', { day:'numeric', month:'long', year:'numeric' }); } catch(e){ return ds; } }
 

@@ -87,6 +87,10 @@ svg { display: block; }
   display: flex; align-items: center; justify-content: center; color: transparent; background: var(--panel); }
 .chk svg { width: 15px; height: 15px; }
 .chk:hover { border-color: var(--ok); color: var(--ok); }
+.undo-btn { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel);
+  display: flex; align-items: center; justify-content: center; color: var(--dim); flex: 0 0 auto; cursor: pointer; }
+.undo-btn svg { width: 14px; height: 14px; }
+.undo-btn:hover { border-color: var(--accent); color: var(--accent); }
 
 /* ---------- Empty ---------- */
 .empty { text-align: center; padding: 70px 24px; color: var(--dim); }
