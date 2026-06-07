@@ -171,6 +171,42 @@ function countdownText(loop) {
   return { num: dl, label: 'días restantes' };
 }
 
+/* Largo del ciclo en días (para la barra de progreso) */
+function cycleDays(loop) {
+  switch (loop.recurrence) {
+    case 'weekly':  return 7;
+    case 'monthly': return 30.44;
+    case 'yearly':  return 365;
+    default:        return Math.max((loop.notifyDaysBefore || 3) * 2, 14); // 'none'
+  }
+}
+
+/* Partes de la cuenta regresiva REAL (tic a tic) + % de la barra */
+function cdParts(loop) {
+  const DAY = 86400000;
+  const pad = (n) => String(n).padStart(2, '0');
+  const deadline = parseDate(loop.nextDate).getTime() + DAY; // vence al final del día
+  const rem = deadline - Date.now();
+
+  if (rem <= 0) {
+    const od = Math.abs(daysUntil(loop.nextDate));
+    return { overdue: true, big: String(od), label: `día${od === 1 ? '' : 's'} vencido`, clock: '', pct: 100 };
+  }
+  const days = Math.floor(rem / DAY);
+  const hh = Math.floor((rem % DAY) / 3600000);
+  const mm = Math.floor((rem % 3600000) / 60000);
+  const ss = Math.floor((rem % 60000) / 1000);
+  const clock = `${pad(hh)}:${pad(mm)}:${pad(ss)}`;
+
+  let big, label;
+  if (days === 0) { big = 'Hoy'; label = 'vence hoy'; }
+  else { big = `${days} d`; label = days === 1 ? 'para mañana' : 'días restantes'; }
+
+  const remDays = rem / DAY;
+  const pct = Math.max(4, Math.min(100, Math.round((1 - remDays / cycleDays(loop)) * 100)));
+  return { overdue: false, big, label, clock, pct };
+}
+
 /* Avanzar al próximo ciclo según recurrencia */
 function nextCycle(dateStr, recurrence) {
   const d = parseDate(dateStr);
@@ -335,7 +371,7 @@ function renderBoard(main) {
 function cardHTML(loop) {
   const st = statusOf(loop);
   const s = STATES[st];
-  const cd = countdownText(loop);
+  const cd = cdParts(loop);
   const cat = CATEGORIES[loop.category];
   const doneLabel = loop.amount ? 'Pagado' : 'Hecho';
   return `
@@ -346,15 +382,35 @@ function cardHTML(loop) {
       </div>
       <div class="title">${escapeHtml(loop.title)}</div>
       <div class="countdown">
-        <span class="count-num${cd.sm ? ' sm' : ''}">${cd.num}</span>
+        <span class="count-num">${cd.big}</span>
         <span class="count-label">${cd.label}</span>
       </div>
+      <div class="count-clock"${cd.clock ? '' : ' style="display:none"'}>${cd.clock}</div>
+      <div class="countbar"><i style="width:${cd.pct}%"></i></div>
       <div class="meta">
         <span class="amount">${loop.amount ? money(loop.amount) : '<span style="color:var(--text-dim)">—</span>'}</span>
         <span class="cycle">${svg(cat.icon)} ${RECURRENCE[loop.recurrence].label}</span>
       </div>
       <button class="done-btn">${svg('check')} ${doneLabel}</button>
     </div>`;
+}
+
+/* Refresco en vivo (tic a tic) de cuentas regresivas y barras, sin re-renderizar */
+function tickCountdowns() {
+  document.querySelectorAll('#main .loop-card').forEach(card => {
+    const loop = loops.find(l => l.id === card.dataset.id);
+    if (!loop) return;
+    const p = cdParts(loop);
+    const num = card.querySelector('.count-num');
+    const lab = card.querySelector('.count-label');
+    const clk = card.querySelector('.count-clock');
+    const bar = card.querySelector('.countbar > i');
+    if (num) num.textContent = p.big;
+    if (lab) lab.textContent = p.label;
+    if (clk) { clk.textContent = p.clock; clk.style.display = p.clock ? '' : 'none'; }
+    if (bar) bar.style.width = p.pct + '%';
+    card.style.setProperty('--state-color', STATES[statusOf(loop)].color);
+  });
 }
 
 /* ---------- Vista: Suscripciones (tracking) ---------- */
@@ -785,11 +841,12 @@ document.querySelectorAll('[data-ico]').forEach(el => {
 });
 render();
 checkDue();
-// Cada minuto: actualiza las cuentas regresivas en vivo y revisa vencimientos
+// Cada segundo: tic real de cuentas regresivas + barras (solo Tablero, sin re-render)
 setInterval(() => {
-  if (document.getElementById('modal-overlay').hidden) {
-    renderSummary();
-    if (activeView === 'board') renderView();
-  }
+  if (activeView === 'board' && document.getElementById('modal-overlay').hidden) tickCountdowns();
+}, 1000);
+// Cada minuto: refresca el resumen y revisa vencimientos (avisos)
+setInterval(() => {
+  if (document.getElementById('modal-overlay').hidden) renderSummary();
   checkDue();
 }, 60000);
