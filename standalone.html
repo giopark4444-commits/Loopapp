@@ -212,6 +212,8 @@ svg { display: block; }
   border-radius: 999px; padding: 7px 12px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; }
 .dd-add svg { width: 14px; height: 14px; }
 .dd-empty { color: var(--dim); font-size: 13px; padding: 22px; text-align: center; line-height: 1.5; }
+.agenda-day { margin-top: 6px; }
+.ag-h { font-family: var(--serif); font-size: 15px; font-weight: 600; padding: 12px 16px 2px; text-transform: capitalize; }
 
 /* ---------- Ajustes ---------- */
 .opt { display: flex; align-items: center; gap: 13px; width: calc(100% - 32px); margin: 0 16px; padding: 14px 4px;
@@ -296,6 +298,12 @@ svg { display: block; }
 .cat-picker button svg { width: 17px; height: 17px; color: var(--dim); }
 .cat-picker button.sel { border-color: var(--accent); background: var(--accent-tint); color: var(--accent); }
 .cat-picker button.sel svg { color: var(--accent); }
+.form-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 16px; }
+.fa-btn { flex: 1 1 calc(50% - 4px); display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  background: var(--bg); border: 1px solid var(--line); color: var(--text); border-radius: 11px; padding: 11px;
+  font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.fa-btn svg { width: 15px; height: 15px; color: var(--dim); }
+.fa-btn:active { transform: scale(.97); }
 .modal-actions { display: flex; gap: 10px; margin-top: 22px; }
 .btn { flex: 1; padding: 13px; border-radius: 12px; border: none; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; }
 .btn svg { width: 16px; height: 16px; }
@@ -440,6 +448,10 @@ const ICON = {
   wrench: '<path d="M14.7 6.3a4 4 0 0 0-5.6 5.6L3 18l3 3 6.1-6.1a4 4 0 0 0 5.6-5.6l-2.7 2.7-2.5-.5-.5-2.5 2.7-2.7z"/>',
   briefcase: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
   pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>',
+  copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  share: '<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>',
+  forward: '<polyline points="15 17 20 12 15 7"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/>',
+  clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
 };
 function svg(name) { const i = ICON[name]; return i == null ? '' :
   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${i}</svg>`; }
@@ -503,12 +515,14 @@ const ICONS = ['star','credit-card','landmark','wallet','tv','music','cloud','sm
 
 /* ---------- Estado de la app ---------- */
 let loops = load();
-let activeSection = 'inicio';
-let payFilter = 'all';   // all | manual | auto
-let activeCategory = 'all';
+let activeSection = pref('ui.section', 'inicio');
+let payFilter = pref('ui.pay', 'all');   // all | manual | auto | free
+let activeCategory = pref('ui.cat', 'all');
 let searchQuery = '';
 let calOffset = 0;
-let loopSort = 'priority';
+let weekOffset = 0;
+let calView = pref('ui.calview', 'month');
+let loopSort = pref('ui.sort', 'priority');
 let selectedDay = null;
 
 /* ---------- Persistencia ---------- */
@@ -698,6 +712,27 @@ function upsertLoop(data) {
   save(); render();
 }
 function deleteLoop(id) { loops = loops.filter(l => l.id !== id); save(); render(); }
+function snoozeLoop(id) {
+  const loop = loops.find(l => l.id === id); if (!loop) return;
+  const next = nextCycle(loop);
+  if (next) loop.nextDate = next;
+  else { const d = parseDate(loop.nextDate); d.setDate(d.getDate() + 7); loop.nextDate = fmtDate(d); }
+  save(); render();
+}
+function duplicateLoop(id) {
+  const loop = loops.find(l => l.id === id); if (!loop) return;
+  loops.push({ ...loop, id: uid(), title: loop.title + ' (copia)', history: [] });
+  save(); render();
+}
+function shareLoop(loop) {
+  const parts = [loop.title];
+  if (loop.amount) parts.push(amtLabel(loop));
+  parts.push(recurLabel(loop), 'Próx.: ' + loop.nextDate);
+  if (loop.notes) parts.push(loop.notes);
+  const text = 'Loopapp · ' + parts.join(' · ');
+  if (navigator.share) navigator.share({ text }).catch(() => {});
+  else { try { navigator.clipboard.writeText(text); alert('Copiado:\n\n' + text); } catch (e) { alert(text); } }
+}
 
 /* ============================================================
    Navegación
@@ -717,7 +752,7 @@ function renderNav() {
   html += `<div class="sep"></div><small>Ajustes</small>
     <a data-sec="ajustes" class="${activeSection==='ajustes'?'act':''}">${svg('sliders')} Datos y opciones</a>`;
   nav.innerHTML = html;
-  nav.querySelectorAll('a[data-sec]').forEach(a => a.onclick = () => { activeSection = a.dataset.sec; closeDrawer(); render(); });
+  nav.querySelectorAll('a[data-sec]').forEach(a => a.onclick = () => { activeSection = a.dataset.sec; setPref('ui.section', activeSection); closeDrawer(); render(); });
 }
 const drawer = () => document.getElementById('drawer');
 function openDrawer() { renderNav(); document.getElementById('scrim').hidden = false; drawer().classList.add('open'); }
@@ -800,8 +835,8 @@ function renderInicio(v) {
 
   const catsel = v.querySelector('#catsel'), catmenu = v.querySelector('#catmenu');
   catsel.onclick = (e) => { e.stopPropagation(); catmenu.hidden = !catmenu.hidden; };
-  catmenu.querySelectorAll('.catopt').forEach(b => b.onclick = () => { activeCategory = b.dataset.cat; render(); });
-  v.querySelectorAll('.seg button').forEach(b => b.onclick = () => { payFilter = b.dataset.pay; render(); });
+  catmenu.querySelectorAll('.catopt').forEach(b => b.onclick = () => { activeCategory = b.dataset.cat; setPref('ui.cat', activeCategory); render(); });
+  v.querySelectorAll('.seg button').forEach(b => b.onclick = () => { payFilter = b.dataset.pay; setPref('ui.pay', payFilter); render(); });
   const s = v.querySelector('#search');
   s.oninput = (e) => { searchQuery = e.target.value.trim().toLowerCase(); renderList(); };
   renderList();
@@ -886,12 +921,30 @@ function renderLoops(v) {
     <div class="sortbar"><span>${list.length} loop${list.length===1?'':'s'}</span>
       <select id="loop-sort" aria-label="Ordenar">${opts}</select></div>
     <div class="list" id="list">${list.length ? list.map(rowHTML).join('') : `<div class="empty"><div class="em">${svg('list')}</div><h3>Sin loops</h3><p>Toca “Nuevo” para crear uno.</p></div>`}</div>`;
-  const sel = v.querySelector('#loop-sort'); sel.onchange = () => { loopSort = sel.value; render(); };
+  const sel = v.querySelector('#loop-sort'); sel.onchange = () => { loopSort = sel.value; setPref('ui.sort', loopSort); render(); };
   bindRows(v);
 }
 
 /* ---------- CALENDARIO ---------- */
-function renderCalendario(v) {
+function calCellHTML(date, todayStr) {
+  const ds = fmtDate(date);
+  const items = loops.filter(l => occursOn(l, date));
+  const colors = items.slice(0, 6).map(l => STATES[statusOf(l)].color);
+  const filled = colors.length > 0;
+  const style = filled ? ` style="background:${cellBg(colors)}"` : '';
+  return `<div class="cal-cell ${ds===todayStr?'today':''} ${filled?'filled':''} ${ds===selectedDay?'sel':''}" data-date="${ds}"${style}><span class="dn">${date.getDate()}</span></div>`;
+}
+function dayDetailHTML() {
+  if (!selectedDay) return '';
+  const date = parseDate(selectedDay);
+  const items = loops.filter(l => occursOn(l, date)).sort((a,b) => STATES[statusOf(a)].order - STATES[statusOf(b)].order);
+  const nice = date.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' });
+  return `<div class="day-detail">
+    <div class="dd-head"><h4>${nice}</h4><button class="dd-add" id="dd-add">${svg('plus')} Agregar aquí</button></div>
+    ${items.length ? `<div class="list">${items.map(rowHTML).join('')}</div>` : `<p class="dd-empty">Nada programado este día.<br>Toca “Agregar aquí” para crear un Loop.</p>`}
+  </div>`;
+}
+function calMonth() {
   const base = new Date(); base.setDate(1); base.setMonth(base.getMonth() + calOffset);
   const year = base.getFullYear(), month = base.getMonth();
   const monthName = base.toLocaleDateString('es', { month: 'long', year: 'numeric' });
@@ -901,37 +954,44 @@ function renderCalendario(v) {
   let cells = '';
   ['L','M','X','J','V','S','D'].forEach(d => cells += `<div class="cal-dow">${d}</div>`);
   for (let i = 0; i < firstDow; i++) cells += `<div class="cal-cell empty"></div>`;
-  for (let day = 1; day <= days; day++) {
-    const date = new Date(year, month, day), ds = fmtDate(date);
-    const items = loops.filter(l => occursOn(l, date));
-    const colors = items.slice(0, 6).map(l => STATES[statusOf(l)].color);
-    const filled = colors.length > 0;
-    const style = filled ? ` style="background:${cellBg(colors)}"` : '';
-    cells += `<div class="cal-cell ${ds===todayStr?'today':''} ${filled?'filled':''} ${ds===selectedDay?'sel':''}" data-date="${ds}"${style}><span class="dn">${day}</span></div>`;
-  }
-  let detail = '';
-  if (selectedDay) {
-    const date = parseDate(selectedDay);
+  for (let day = 1; day <= days; day++) cells += calCellHTML(new Date(year, month, day), todayStr);
+  return `<div class="cal-head"><button class="iconbtn" id="cprev">${svg('chevron-left')}</button><h3>${monthName}</h3><button class="iconbtn" id="cnext">${svg('chevron-right')}</button></div><div class="cal-grid">${cells}</div>${dayDetailHTML()}`;
+}
+function calWeek() {
+  const today = todayMid();
+  const monday = new Date(today); monday.setDate(today.getDate() - ((today.getDay() + 6) % 7) + weekOffset * 7);
+  const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+  const todayStr = fmtDate(today);
+  const title = `${monday.toLocaleDateString('es',{day:'numeric',month:'short'})} – ${sunday.toLocaleDateString('es',{day:'numeric',month:'short'})}`;
+  let cells = '';
+  ['L','M','X','J','V','S','D'].forEach(d => cells += `<div class="cal-dow">${d}</div>`);
+  for (let i = 0; i < 7; i++) { const dt = new Date(monday); dt.setDate(monday.getDate() + i); cells += calCellHTML(dt, todayStr); }
+  return `<div class="cal-head"><button class="iconbtn" id="cprev">${svg('chevron-left')}</button><h3 style="text-transform:none">${title}</h3><button class="iconbtn" id="cnext">${svg('chevron-right')}</button></div><div class="cal-grid">${cells}</div>${dayDetailHTML()}`;
+}
+function calAgenda() {
+  const today = todayMid();
+  let html = '<div class="sec-title" style="padding-top:8px">Próximos 7 días</div>', any = false;
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(today); date.setDate(today.getDate() + i);
     const items = loops.filter(l => occursOn(l, date)).sort((a,b) => STATES[statusOf(a)].order - STATES[statusOf(b)].order);
-    const nice = date.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' });
-    detail = `<div class="day-detail">
-      <div class="dd-head"><h4>${nice}</h4><button class="dd-add" id="dd-add">${svg('plus')} Agregar aquí</button></div>
-      ${items.length ? `<div class="list">${items.map(rowHTML).join('')}</div>` : `<p class="dd-empty">Nada programado este día.<br>Toca “Agregar aquí” para crear un Loop.</p>`}
-    </div>`;
+    if (!items.length) continue;
+    any = true;
+    const nice = i === 0 ? 'Hoy' : i === 1 ? 'Mañana' : date.toLocaleDateString('es', { weekday:'long', day:'numeric', month:'short' });
+    html += `<div class="agenda-day"><div class="ag-h">${nice}</div><div class="list">${items.map(rowHTML).join('')}</div></div>`;
   }
-  v.innerHTML = `
-    <div class="cal-head">
-      <button class="iconbtn" id="cprev" aria-label="Anterior">${svg('chevron-left')}</button>
-      <h3>${monthName}</h3>
-      <button class="iconbtn" id="cnext" aria-label="Siguiente">${svg('chevron-right')}</button>
-    </div>
-    <div class="cal-grid">${cells}</div>
-    ${detail}`;
-  v.querySelector('#cprev').onclick = () => { calOffset--; render(); };
-  v.querySelector('#cnext').onclick = () => { calOffset++; render(); };
-  v.querySelectorAll('.cal-cell[data-date]').forEach(c => c.onclick = () => { selectedDay = (selectedDay === c.dataset.date) ? null : c.dataset.date; render(); });
+  if (!any) html += `<div class="empty"><div class="em">${svg('clock')}</div><h3>Semana libre</h3><p>No hay nada en los próximos 7 días.</p></div>`;
+  return html;
+}
+function renderCalendario(v) {
+  const seg = (k,l) => `<button class="${calView===k?'on':''}" data-cv="${k}">${l}</button>`;
+  const body = calView === 'week' ? calWeek() : calView === 'agenda' ? calAgenda() : calMonth();
+  v.innerHTML = `<div class="seg" style="margin:14px 16px 4px">${seg('month','Mes')}${seg('week','Semana')}${seg('agenda','Agenda')}</div>${body}`;
+  v.querySelectorAll('.seg button[data-cv]').forEach(b => b.onclick = () => { calView = b.dataset.cv; setPref('ui.calview', calView); render(); });
+  if (calView === 'month') { v.querySelector('#cprev').onclick = () => { calOffset--; render(); }; v.querySelector('#cnext').onclick = () => { calOffset++; render(); }; }
+  if (calView === 'week') { v.querySelector('#cprev').onclick = () => { weekOffset--; render(); }; v.querySelector('#cnext').onclick = () => { weekOffset++; render(); }; }
+  if (calView !== 'agenda') v.querySelectorAll('.cal-cell[data-date]').forEach(c => c.onclick = () => { selectedDay = (selectedDay === c.dataset.date) ? null : c.dataset.date; render(); });
   const add = v.querySelector('#dd-add'); if (add) add.onclick = () => openForm(null, { date: selectedDay });
-  if (detail) bindRows(v);
+  bindRows(v);
 }
 
 /* ---------- FINANZAS ---------- */
@@ -955,6 +1015,8 @@ function renderFinanzas(v) {
   const curRows = curs.length > 1 ? `<div class="brk"><h4>Por moneda / mes</h4>${
     curs.sort((a,b) => byCur[b]-byCur[a]).map(c => `<div class="brk-row"><span class="bn">${c} ${CURRENCIES[c] || ''}</span><span class="bv">${money0(byCur[c], c)} · ${money0(byCur[c]*12, c)}/año</span></div>`).join('')
   }</div>` : '';
+  const topRows = inPrim.slice().sort((a,b) => monthlyCost(b) - monthlyCost(a)).slice(0, 5)
+    .map(l => `<div class="brk-row"><span class="bn">${svg(catOf(l).icon)} ${escapeHtml(l.title)}</span><span class="bv">${money0(monthlyCost(l), primary)}/mes</span></div>`).join('');
   v.innerHTML = `
     <div class="sec-title">Finanzas</div>
     <div class="hero">
@@ -970,6 +1032,7 @@ function renderFinanzas(v) {
       <div class="stat"><div class="n">${money0(manM, primary)}</div><div class="t">Manual (${100-pctAuto}%)</div></div>
     </div>
     ${curRows}
+    ${topRows ? `<div class="brk"><h4>Mayores gastos / mes</h4>${topRows}</div>` : ''}
     <div class="brk"><h4>Por categoría / mes${curs.length > 1 ? ' (' + primary + ')' : ''}</h4>${catRows || '<p class="sub" style="padding:0">Sin montos aún.</p>'}</div>`;
 }
 
@@ -989,6 +1052,12 @@ function renderStats(v) {
   const load = monthlyLoad();
   const maxL = Math.max(1, ...load.map(x => x.count));
   const chart = `<div class="chart">${load.map(x => `<div class="chart-col"><div class="chart-bar" style="height:${Math.max(3, Math.round(x.count/maxL*100))}px"></div><div class="chart-n">${x.count}</div><div class="chart-l">${x.label}</div></div>`).join('')}</div>`;
+  const done = getDone();
+  const onTime = done.filter(e => e.ts <= parseDate(e.date).getTime() + 86400000).length;
+  const pctOnTime = done.length ? Math.round(onTime / done.length * 100) : 100;
+  const dload = doneByMonth();
+  const maxD = Math.max(1, ...dload.map(x => x.count));
+  const doneChart = `<div class="chart">${dload.map(x => `<div class="chart-col"><div class="chart-bar" style="height:${Math.max(3, Math.round(x.count/maxD*100))}px;background:var(--ok)"></div><div class="chart-n">${x.count}</div><div class="chart-l">${x.label}</div></div>`).join('')}</div>`;
   v.innerHTML = `
     <div class="sec-title">Estadísticas</div>
     <div class="stat-grid">
@@ -997,10 +1066,20 @@ function renderStats(v) {
       <div class="stat"><div class="n">${pendientes}</div><div class="t">pendientes</div></div>
       <div class="stat"><div class="n">${manualesPend}</div><div class="t">manuales por pagar</div></div>
       <div class="stat"><div class="n">${pagados}</div><div class="t">completados</div></div>
-      <div class="stat"><div class="n">${total}</div><div class="t">loops activos</div></div>
+      <div class="stat"><div class="n" style="color:var(--ok)">${pctOnTime}%</div><div class="t">a tiempo</div></div>
     </div>
     <div class="brk"><h4>Estado general</h4>${statusBar}${legend}</div>
-    <div class="brk"><h4>Carga próximos 6 meses</h4>${chart}</div>`;
+    <div class="brk"><h4>Carga próximos 6 meses</h4>${chart}</div>
+    ${done.length ? `<div class="brk"><h4>Completados por mes</h4>${doneChart}</div>` : ''}`;
+}
+function doneByMonth() {
+  const out = [], base = new Date(); base.setDate(1); const done = getDone();
+  for (let m = 5; m >= 0; m--) {
+    const d0 = new Date(base.getFullYear(), base.getMonth() - m, 1), y = d0.getFullYear(), mo = d0.getMonth();
+    const count = done.filter(e => { const t = new Date(e.ts); return t.getFullYear() === y && t.getMonth() === mo; }).length;
+    out.push({ label: d0.toLocaleDateString('es', { month: 'short' }), count });
+  }
+  return out;
 }
 function monthlyLoad() {
   const out = [], base = new Date(); base.setDate(1);
@@ -1151,7 +1230,12 @@ function openForm(loop, opts) {
       <div class="field"><label>Avisar (días antes)</label><input id="f-notify" type="number" min="0" max="60" value="${data.notifyDaysBefore ?? 3}" /></div>
     </div>
     <div class="field"><label>Notas (opcional)</label><textarea id="f-notes" rows="2" placeholder="Ej. número de cuenta, recordatorio, link…">${escapeHtml(data.notes || '')}</textarea></div>
-    ${isEdit ? `<button type="button" class="btn btn-ghost" id="f-ics" style="width:100%;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px">${svg('calendar')} Añadir al calendario</button>` : ''}
+    ${isEdit ? `<div class="form-actions">
+      <button type="button" class="fa-btn" id="f-skip">${svg('forward')} Saltar fecha</button>
+      <button type="button" class="fa-btn" id="f-dup">${svg('copy')} Duplicar</button>
+      <button type="button" class="fa-btn" id="f-share">${svg('share')} Compartir</button>
+      <button type="button" class="fa-btn" id="f-ics">${svg('calendar')} Calendario</button>
+    </div>` : ''}
     <div class="modal-actions">
       ${isEdit ? `<button class="btn btn-danger" id="f-delete">Eliminar</button>` : ''}
       <button class="btn btn-ghost" id="f-cancel">Cancelar</button>
@@ -1172,7 +1256,12 @@ function openForm(loop, opts) {
   }
   recU.onchange = updRec; recN.oninput = updRec; updRec();
   const close = () => { overlay.hidden = true; };
-  if (isEdit) modal.querySelector('#f-ics').onclick = () => downloadICS([data], 'loop');
+  if (isEdit) {
+    modal.querySelector('#f-ics').onclick = () => downloadICS([data], 'loop');
+    modal.querySelector('#f-skip').onclick = () => { snoozeLoop(data.id); close(); };
+    modal.querySelector('#f-dup').onclick = () => { duplicateLoop(data.id); close(); };
+    modal.querySelector('#f-share').onclick = () => shareLoop(data);
+  }
   modal.querySelector('#f-cancel').onclick = close;
   overlay.onclick = (e) => { if (e.target === overlay) close(); };
   if (isEdit) modal.querySelector('#f-delete').onclick = () => { if (confirm(`¿Eliminar "${data.title}"?`)) { deleteLoop(data.id); close(); } };
@@ -1382,7 +1471,7 @@ window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); defe
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
 /* ---------- Arranque ---------- */
-applyTheme(pref('theme', 'marfil'));
+applyTheme(pref('theme', (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'noche' : 'marfil'));
 // Inyecta los iconos SVG estáticos (☰ del header, + de Nuevo, logo del drawer)
 document.querySelectorAll('[data-ico]').forEach(el => el.insertAdjacentHTML('afterbegin', svg(el.dataset.ico)));
 render();

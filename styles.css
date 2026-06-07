@@ -204,6 +204,8 @@ svg { display: block; }
   border-radius: 999px; padding: 7px 12px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; }
 .dd-add svg { width: 14px; height: 14px; }
 .dd-empty { color: var(--dim); font-size: 13px; padding: 22px; text-align: center; line-height: 1.5; }
+.agenda-day { margin-top: 6px; }
+.ag-h { font-family: var(--serif); font-size: 15px; font-weight: 600; padding: 12px 16px 2px; text-transform: capitalize; }
 
 /* ---------- Ajustes ---------- */
 .opt { display: flex; align-items: center; gap: 13px; width: calc(100% - 32px); margin: 0 16px; padding: 14px 4px;
@@ -288,6 +290,12 @@ svg { display: block; }
 .cat-picker button svg { width: 17px; height: 17px; color: var(--dim); }
 .cat-picker button.sel { border-color: var(--accent); background: var(--accent-tint); color: var(--accent); }
 .cat-picker button.sel svg { color: var(--accent); }
+.form-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 16px; }
+.fa-btn { flex: 1 1 calc(50% - 4px); display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  background: var(--bg); border: 1px solid var(--line); color: var(--text); border-radius: 11px; padding: 11px;
+  font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.fa-btn svg { width: 15px; height: 15px; color: var(--dim); }
+.fa-btn:active { transform: scale(.97); }
 .modal-actions { display: flex; gap: 10px; margin-top: 22px; }
 .btn { flex: 1; padding: 13px; border-radius: 12px; border: none; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; }
 .btn svg { width: 16px; height: 16px; }
