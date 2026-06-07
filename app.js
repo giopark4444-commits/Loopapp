@@ -650,8 +650,20 @@ function renderAjustes(v) {
     <div class="brk"><h4>Avisos</h4>
       <button class="opt" id="o-notify">${svg('bell')} ${pushEnabled() ? 'Avisos activados ✓ · reconfigurar' : 'Activar avisos push'}</button></div>
     <div class="brk"><h4>Calendario</h4>
-      <button class="opt" id="o-ics">${svg('calendar')} Añadir todo a mi calendario</button>
-      <p class="sub" style="padding:6px 2px 0;font-size:11.5px">Crea un archivo .ics compatible con Apple Calendar y Google Calendar, con repeticiones y recordatorios.</p></div>
+      <button class="opt" id="o-ics">${svg('calendar')} Añadir todo (.ics, una vez)</button>
+      ${calEnabled() ? `
+      <div class="weburl">
+        <div class="wl-tl">${svg('check')} Suscripción activa — se actualiza sola</div>
+        <input id="o-calurl" readonly value="${escapeAttr(webcalUrl())}" onclick="this.select()" />
+        <div class="wl-actions">
+          <button class="wl-btn" id="o-calopen">Abrir en Calendario</button>
+          <button class="wl-btn ghost" id="o-calcopy">Copiar enlace</button>
+          <button class="wl-btn ghost" id="o-caloff">Desactivar</button>
+        </div>
+        <p class="sub" style="padding:8px 0 0;font-size:11.5px">Pégalo en Apple/Google Calendar como “calendario por suscripción”. Tus loops aparecen y se actualizan solos cada pocas horas. No compartas este enlace.</p>
+      </div>` : `
+      <button class="opt" id="o-calsub">${svg('repeat')} Suscripción que se actualiza sola (webcal)</button>`}
+    </div>
     <div class="brk"><h4>Datos</h4>
       <button class="opt" id="o-export">${svg('download')} Exportar copia de seguridad</button>
       <button class="opt" id="o-import">${svg('upload')} Importar copia</button>
@@ -665,6 +677,10 @@ function renderAjustes(v) {
   v.querySelectorAll('.catdel').forEach(b => b.onclick = () => { if (confirm('¿Eliminar esta categoría? Los loops que la usen pasarán a "Otros".')) { removeUserCat(b.dataset.cat); render(); } });
   v.querySelector('#o-addcat').onclick = openCatForm;
   v.querySelector('#o-ics').onclick = () => { if (!loops.length) { alert('No hay Loops que exportar.'); return; } downloadICS(loops, 'loopapp'); };
+  const subBtn = v.querySelector('#o-calsub'); if (subBtn) subBtn.onclick = enableCal;
+  const calopen = v.querySelector('#o-calopen'); if (calopen) calopen.onclick = () => { location.href = webcalUrl(); };
+  const calcopy = v.querySelector('#o-calcopy'); if (calcopy) calcopy.onclick = () => { const u = webcalUrl(); try { navigator.clipboard.writeText(u); } catch (e) { const i = v.querySelector('#o-calurl'); i.select(); document.execCommand('copy'); } calcopy.textContent = 'Copiado ✓'; };
+  const caloff = v.querySelector('#o-caloff'); if (caloff) caloff.onclick = () => { if (confirm('¿Desactivar la suscripción? Tus loops se quitarán de la nube.')) disableCal(); };
   v.querySelector('#o-notify').onclick = setupPush;
   v.querySelector('#o-export').onclick = exportData;
   v.querySelector('#o-import').onclick = () => document.getElementById('import-file').click();
@@ -876,11 +892,37 @@ function deviceId() { let id = localStorage.getItem(DEVICE_KEY); if (!id) { id =
 function urlB64(s) { const pad = '='.repeat((4 - s.length % 4) % 4); const b = (s+pad).replace(/-/g,'+').replace(/_/g,'/'); const raw = atob(b); const a = new Uint8Array(raw.length); for (let i=0;i<raw.length;i++) a[i]=raw.charCodeAt(i); return a; }
 function sbHeaders() { return { 'Content-Type':'application/json', apikey: SB.anonKey, Authorization: `Bearer ${SB.anonKey}` }; }
 let syncTimer;
-function scheduleSync() { if (!pushEnabled()) return; clearTimeout(syncTimer); syncTimer = setTimeout(syncReminders, 1500); }
+function scheduleSync() { if (!pushEnabled() && !calEnabled()) return; clearTimeout(syncTimer); syncTimer = setTimeout(() => { syncReminders(); syncCal(); }, 1500); }
 async function syncReminders() {
   if (!pushEnabled() || !SB.url) return;
   const reminders = loops.map(l => ({ loop_id: l.id, title: l.title, next_date: l.nextDate, notify_days: l.notifyDaysBefore ?? 3 }));
   try { await fetch(`${SB.url}/functions/v1/push-sync`, { method:'POST', headers: sbHeaders(), body: JSON.stringify({ device_id: deviceId(), reminders }) }); } catch (e) {}
+}
+
+/* ---------- Suscripción de calendario (webcal) ---------- */
+const CAL_ENABLED_KEY = 'loopapp.cal.enabled';
+function calEnabled() { return localStorage.getItem(CAL_ENABLED_KEY) === '1'; }
+function webcalUrl() { return SB.url.replace(/^https?:/, 'webcal:') + '/functions/v1/calendar?device=' + deviceId() + '&apikey=' + encodeURIComponent(SB.anonKey || ''); }
+function calLoopsPayload() {
+  return loops.map(l => ({ loop_id: l.id, title: l.title, next_date: l.nextDate, recur: recurOf(l), notify_days: l.notifyDaysBefore ?? 3, category: catOf(l).label, amount: l.amount, currency: l.currency || pref('currency','USD') }));
+}
+async function syncCal() {
+  if (!calEnabled() || !SB.url) return;
+  try { await fetch(`${SB.url}/functions/v1/cal-sync`, { method:'POST', headers: sbHeaders(), body: JSON.stringify({ device_id: deviceId(), loops: calLoopsPayload() }) }); } catch (e) {}
+}
+async function enableCal() {
+  if (!SB.url) { alert('Falta configurar el servidor.'); return; }
+  localStorage.setItem(CAL_ENABLED_KEY, '1');
+  try {
+    const res = await fetch(`${SB.url}/functions/v1/cal-sync`, { method:'POST', headers: sbHeaders(), body: JSON.stringify({ device_id: deviceId(), loops: calLoopsPayload() }) });
+    if (!res.ok) throw new Error();
+    render();
+  } catch (e) { localStorage.removeItem(CAL_ENABLED_KEY); alert('No se pudo activar la suscripción. Revisa tu conexión.'); }
+}
+async function disableCal() {
+  localStorage.removeItem(CAL_ENABLED_KEY);
+  try { await fetch(`${SB.url}/functions/v1/cal-sync`, { method:'POST', headers: sbHeaders(), body: JSON.stringify({ device_id: deviceId(), loops: [] }) }); } catch (e) {}
+  render();
 }
 async function setupPush() {
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) { alert('Tu navegador no soporta notificaciones push.'); return; }
