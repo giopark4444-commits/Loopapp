@@ -160,6 +160,15 @@ svg { display: block; }
 .cal-cell.today .dn { color: var(--accent); }
 .cal-cell.filled .dn { color: #fff; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,.32); }
 .cal-cell.filled.today .dn { color: #fff; }
+.cal-cell[data-date] { cursor: pointer; }
+.cal-cell.sel { box-shadow: 0 0 0 2px var(--accent); }
+.day-detail { margin: 18px 6px 0; border-top: 1px solid var(--line); padding-top: 8px; }
+.dd-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 12px; }
+.dd-head h4 { font-family: var(--serif); font-size: 16px; font-weight: 600; text-transform: capitalize; }
+.dd-add { display: inline-flex; align-items: center; gap: 6px; background: var(--accent-tint); color: var(--accent); border: none;
+  border-radius: 999px; padding: 7px 12px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.dd-add svg { width: 14px; height: 14px; }
+.dd-empty { color: var(--dim); font-size: 13px; padding: 22px; text-align: center; line-height: 1.5; }
 
 /* ---------- Ajustes ---------- */
 .opt { display: flex; align-items: center; gap: 13px; width: calc(100% - 32px); margin: 0 16px; padding: 14px 4px;

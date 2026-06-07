@@ -122,6 +122,7 @@ let activeCategory = 'all';
 let searchQuery = '';
 let calOffset = 0;
 let loopSort = 'priority';
+let selectedDay = null;
 
 /* ---------- Persistencia ---------- */
 function load() {
@@ -505,9 +506,18 @@ function renderCalendario(v) {
     const items = loops.filter(l => occursOn(l, date));
     const colors = items.slice(0, 6).map(l => STATES[statusOf(l)].color);
     const filled = colors.length > 0;
-    const titles = items.map(l => l.title).join(', ');
     const style = filled ? ` style="background:${cellBg(colors)}"` : '';
-    cells += `<div class="cal-cell ${ds===todayStr?'today':''} ${filled?'filled':''}"${style} title="${escapeAttr(titles)}"><span class="dn">${day}</span></div>`;
+    cells += `<div class="cal-cell ${ds===todayStr?'today':''} ${filled?'filled':''} ${ds===selectedDay?'sel':''}" data-date="${ds}"${style}><span class="dn">${day}</span></div>`;
+  }
+  let detail = '';
+  if (selectedDay) {
+    const date = parseDate(selectedDay);
+    const items = loops.filter(l => occursOn(l, date)).sort((a,b) => STATES[statusOf(a)].order - STATES[statusOf(b)].order);
+    const nice = date.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' });
+    detail = `<div class="day-detail">
+      <div class="dd-head"><h4>${nice}</h4><button class="dd-add" id="dd-add">${svg('plus')} Agregar aquí</button></div>
+      ${items.length ? `<div class="list">${items.map(rowHTML).join('')}</div>` : `<p class="dd-empty">Nada programado este día.<br>Toca “Agregar aquí” para crear un Loop.</p>`}
+    </div>`;
   }
   v.innerHTML = `
     <div class="cal-head">
@@ -515,9 +525,13 @@ function renderCalendario(v) {
       <h3>${monthName}</h3>
       <button class="iconbtn" id="cnext" aria-label="Siguiente">${svg('chevron-right')}</button>
     </div>
-    <div class="cal-grid">${cells}</div>`;
+    <div class="cal-grid">${cells}</div>
+    ${detail}`;
   v.querySelector('#cprev').onclick = () => { calOffset--; render(); };
   v.querySelector('#cnext').onclick = () => { calOffset++; render(); };
+  v.querySelectorAll('.cal-cell[data-date]').forEach(c => c.onclick = () => { selectedDay = (selectedDay === c.dataset.date) ? null : c.dataset.date; render(); });
+  const add = v.querySelector('#dd-add'); if (add) add.onclick = () => openForm(null, { date: selectedDay });
+  if (detail) bindRows(v);
 }
 
 /* ---------- FINANZAS ---------- */
@@ -662,9 +676,9 @@ function renderAjustes(v) {
 /* ============================================================
    Formulario (modal)
    ============================================================ */
-function openForm(loop) {
+function openForm(loop, opts) {
   const isEdit = !!loop;
-  const data = loop || { title:'', category:'subs', icon:'credit-card', amount:'', currency: pref('currency','USD'), autoPay: pref('defaultAuto','0')==='1', recur: { n:1, unit:'month' }, nextDate: offsetDate(7), notifyDaysBefore: parseInt(pref('defaultNotify','3'),10) || 3 };
+  const data = loop || { title:'', category:'subs', icon:'credit-card', amount:'', currency: pref('currency','USD'), autoPay: pref('defaultAuto','0')==='1', recur: { n:1, unit:'month' }, nextDate: (opts && opts.date) || offsetDate(7), notifyDaysBefore: parseInt(pref('defaultNotify','3'),10) || 3 };
   const _r = recurOf(data); const ru = _r ? _r.unit : 'none'; const rn = _r ? _r.n : 1;
   const overlay = document.getElementById('modal-overlay'), modal = document.getElementById('modal');
   modal.innerHTML = `
