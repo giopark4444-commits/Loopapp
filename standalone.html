@@ -116,8 +116,10 @@ svg { display: block; }
 .view-switch button.active { background: var(--card); color: var(--text); box-shadow: var(--shadow); }
 
 /* ---------- Buscador ---------- */
-.search-input { width: 100%; margin-top: 14px; background: var(--card);
-  border: 1px solid var(--border); color: var(--text); padding: 11px 14px;
+.search-input { width: 100%; margin-top: 14px; background-color: var(--card);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2376726a' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: 14px center; background-size: 16px;
+  border: 1px solid var(--border); color: var(--text); padding: 11px 14px 11px 40px;
   border-radius: 12px; font-size: 14px; font-family: inherit; }
 .search-input:focus { outline: none; border-color: var(--accent); }
 .search-input::placeholder { color: var(--text-dim); }
@@ -306,7 +308,7 @@ main { margin-top: 14px; }
     </div>
 
     <!-- Buscador -->
-    <input id="search" class="search-input" type="search" placeholder="🔍 Buscar Loop…" autocomplete="off" />
+    <input id="search" class="search-input" type="search" placeholder="Buscar Loop…" autocomplete="off" />
 
     <!-- Contenido principal -->
     <main id="main"></main>
