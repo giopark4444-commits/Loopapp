@@ -162,6 +162,14 @@ svg { display: block; }
   background-repeat: no-repeat; background-position: right 9px center; background-size: 13px; }
 .pref input[type="number"] { width: 64px; text-align: center; }
 
+.rec-hint { font-size: 12px; color: var(--dim); margin-top: 8px; }
+.sortbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 10px 16px 2px; }
+.sortbar span { font-size: 13px; color: var(--dim); font-weight: 600; }
+.sortbar select { -webkit-appearance: none; appearance: none; background: var(--panel); border: 1px solid var(--line); color: var(--text);
+  border-radius: 10px; padding: 9px 32px 9px 13px; font-family: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2386827a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 11px center; background-size: 13px; }
+
 /* ---------- Drawer ---------- */
 .scrim { position: fixed; inset: 0; background: rgba(38,36,32,.34); z-index: 40; }
 .scrim[hidden] { display: none; }
@@ -356,6 +364,7 @@ const ICON = {
   file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
   key: '<circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6"/><path d="M15.5 7.5l3 3L22 7l-3-3"/>',
   bike: '<circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM12 17.5V14l-3-3 4-3 2 3h2"/>',
+  list: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
 };
 function svg(name) { const i = ICON[name]; return i == null ? '' :
   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${i}</svg>`; }
@@ -400,6 +409,7 @@ let activeSection = 'inicio';
 let payFilter = 'all';   // all | manual | auto
 let searchQuery = '';
 let calOffset = 0;
+let loopSort = 'priority';
 
 /* ---------- Persistencia ---------- */
 function load() {
@@ -412,7 +422,7 @@ function seed() {
   const d = offsetDate;
   return [
     { id: uid(), title: 'Netflix',     category: 'subs',    icon: 'tv',       amount: 15.99, autoPay: true,  recurrence: 'monthly', nextDate: d(3),  notifyDaysBefore: 5, history: [] },
-    { id: uid(), title: 'Spotify',     category: 'subs',    icon: 'music',    amount: 11.99, autoPay: true,  recurrence: 'monthly', nextDate: d(12), notifyDaysBefore: 5, history: [] },
+    { id: uid(), title: 'Spotify',     category: 'subs',    icon: 'music',    amount: 11.99, currency: 'EUR', autoPay: true,  recurrence: 'monthly', nextDate: d(12), notifyDaysBefore: 5, history: [] },
     { id: uid(), title: 'iCloud+',     category: 'subs',    icon: 'cloud',    amount: 2.99,  autoPay: true,  recurrence: 'monthly', nextDate: d(-1), notifyDaysBefore: 3, history: [] },
     { id: uid(), title: 'Dominio web', category: 'subs',    icon: 'globe',    amount: 12,    autoPay: false, recurrence: 'yearly',  nextDate: d(40), notifyDaysBefore: 14, history: [] },
     { id: uid(), title: 'Alquiler',    category: 'money',   icon: 'home',     amount: 800,   autoPay: false, recurrence: 'monthly', nextDate: d(8),  notifyDaysBefore: 5, history: [] },
@@ -447,7 +457,12 @@ function statusOf(loop) {
 function payType(loop) { return !loop.amount ? 'task' : (loop.autoPay ? 'auto' : 'manual'); }
 
 function cycleDays(loop) {
-  return CYCLE_DAYS[loop.recurrence] || Math.max((loop.notifyDaysBefore || 3) * 2, 14);
+  const r = recurOf(loop);
+  if (!r) return Math.max((loop.notifyDaysBefore || 3) * 2, 14);
+  if (r.unit === 'day') return r.n;
+  if (r.unit === 'week') return 7 * r.n;
+  if (r.unit === 'month') return 30.44 * r.n;
+  return 365 * r.n;
 }
 function cdParts(loop) {
   const DAY = 86400000, pad = n => String(n).padStart(2,'0');
@@ -459,35 +474,63 @@ function cdParts(loop) {
   if (days === 1) return { big: '1 d', cl: 'para mañana', pct };
   return { big: `${days} d`, cl: 'restantes', pct };
 }
-function nextCycle(dateStr, recurrence) {
-  const d = parseDate(dateStr), today = todayMid();
-  if (recurrence === 'none') return null;
+function nextCycle(loop) {
+  const r = recurOf(loop); if (!r) return null;
+  const d = parseDate(loop.nextDate), today = todayMid();
   do {
-    if (STEP_DAYS[recurrence]) d.setDate(d.getDate() + STEP_DAYS[recurrence]);
-    else if (STEP_MONTHS[recurrence]) d.setMonth(d.getMonth() + STEP_MONTHS[recurrence]);
-    else return null;
+    if (r.unit === 'day') d.setDate(d.getDate() + r.n);
+    else if (r.unit === 'week') d.setDate(d.getDate() + 7 * r.n);
+    else if (r.unit === 'month') d.setMonth(d.getMonth() + r.n);
+    else d.setFullYear(d.getFullYear() + r.n);
   } while (d <= today);
   return fmtDate(d);
 }
 function occursOn(loop, date) {
-  const a = parseDate(loop.nextDate), r = loop.recurrence;
-  if (r === 'none') return fmtDate(date) === loop.nextDate;
-  if (STEP_DAYS[r]) { const diff = Math.round((date - a) / 86400000); return diff % STEP_DAYS[r] === 0; }
-  const per = STEP_MONTHS[r];
-  if (!per) return false;
+  const r = recurOf(loop), a = parseDate(loop.nextDate);
+  if (!r) return fmtDate(date) === loop.nextDate;
+  if (r.unit === 'day') { const diff = Math.round((date - a) / 86400000); return diff % r.n === 0; }
+  if (r.unit === 'week') { const diff = Math.round((date - a) / 86400000); return diff % (7 * r.n) === 0; }
   if (date.getDate() !== a.getDate()) return false;
   const md = (date.getFullYear() - a.getFullYear()) * 12 + (date.getMonth() - a.getMonth());
-  return md % per === 0;
+  const stepM = r.unit === 'month' ? r.n : 12 * r.n;
+  return md % stepM === 0;
 }
-function monthlyCost(loop) { return !loop.amount ? 0 : loop.amount * (RECURRENCE[loop.recurrence]?.perMonth || 0); }
+/* ---------- Recurrencia flexible: { n, unit } ---------- */
+const UNIT_LABEL = { day: ['día','días'], week: ['semana','semanas'], month: ['mes','meses'], year: ['año','años'] };
+const LEGACY_RECUR = { daily:{n:1,unit:'day'}, weekly:{n:1,unit:'week'}, biweekly:{n:2,unit:'week'},
+  monthly:{n:1,unit:'month'}, bimonthly:{n:2,unit:'month'}, quarterly:{n:3,unit:'month'}, biannual:{n:6,unit:'month'}, yearly:{n:1,unit:'year'} };
+function recurOf(loop) {
+  if (loop.recur && loop.recur.unit) {
+    if (loop.recur.unit === 'none') return null;
+    return { n: Math.max(1, parseInt(loop.recur.n, 10) || 1), unit: loop.recur.unit };
+  }
+  return LEGACY_RECUR[loop.recurrence] || null;
+}
+function recurLabel(loop) {
+  const r = recurOf(loop);
+  if (!r) return 'Sin repetir';
+  const nice = { '1day':'Diario','1week':'Semanal','2week':'Quincenal','1month':'Mensual','2month':'Bimestral','3month':'Trimestral','6month':'Semestral','1year':'Anual' }[r.n + r.unit];
+  if (nice) return nice;
+  const lbl = UNIT_LABEL[r.unit];
+  return 'Cada ' + r.n + ' ' + (r.n === 1 ? lbl[0] : lbl[1]);
+}
+function perMonthOf(loop) {
+  const r = recurOf(loop); if (!r) return 0;
+  if (r.unit === 'day') return 30.4375 / r.n;
+  if (r.unit === 'week') return 4.34524 / r.n;
+  if (r.unit === 'month') return 1 / r.n;
+  return 1 / (12 * r.n); // year
+}
+function monthlyCost(loop) { return !loop.amount ? 0 : loop.amount * perMonthOf(loop); }
 
 /* ---------- Preferencias (moneda, avisos, etc.) ---------- */
 const CURRENCIES = { USD:'$', EUR:'€', GBP:'£', MXN:'$', COP:'$', ARS:'$', CLP:'$', BRL:'R$', PEN:'S/' };
 function pref(k, def) { const v = localStorage.getItem('loopapp.' + k); return v === null ? def : v; }
 function setPref(k, v) { localStorage.setItem('loopapp.' + k, v); }
-function curSym() { return CURRENCIES[pref('currency','USD')] || '$'; }
-function money(n) { return curSym() + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-function money0(n) { return curSym() + Math.round(Number(n)).toLocaleString('en-US'); }
+function symOf(code) { return CURRENCIES[code] || CURRENCIES[pref('currency','USD')] || '$'; }
+function money(n, code) { return symOf(code) + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function money0(n, code) { return symOf(code) + Math.round(Number(n)).toLocaleString('en-US'); }
+function amtLabel(loop) { if (!loop.amount) return ''; const def = pref('currency','USD'); const code = loop.currency || def; const m = money(loop.amount, code); return code !== def ? m + ' ' + code : m; }
 
 /* ---------- Temas ---------- */
 const THEMES = [
@@ -526,7 +569,7 @@ function logDone(loop) {
 function markDone(id) {
   const loop = loops.find(l => l.id === id); if (!loop) return;
   logDone(loop);
-  const next = nextCycle(loop.nextDate, loop.recurrence);
+  const next = nextCycle(loop);
   loop.history = loop.history || []; loop.history.push(loop.nextDate);
   if (next) loop.nextDate = next; else loops = loops.filter(l => l.id !== id);
   save(); render();
@@ -558,6 +601,7 @@ function deleteLoop(id) { loops = loops.filter(l => l.id !== id); save(); render
    ============================================================ */
 const SECTIONS = [
   { key: 'inicio',    icon: 'grid',     label: 'Inicio' },
+  { key: 'loops',     icon: 'list',     label: 'Loops' },
   { key: 'calendario',icon: 'calendar', label: 'Calendario' },
   { key: 'finanzas',  icon: 'wallet',   label: 'Finanzas' },
   { key: 'stats',     icon: 'bars',     label: 'Estadísticas' },
@@ -583,6 +627,7 @@ function render() {
   renderGreeting();
   const v = document.getElementById('view');
   if (activeSection === 'inicio') return renderInicio(v);
+  if (activeSection === 'loops') return renderLoops(v);
   if (activeSection === 'calendario') return renderCalendario(v);
   if (activeSection === 'finanzas') return renderFinanzas(v);
   if (activeSection === 'stats') return renderStats(v);
@@ -655,7 +700,7 @@ function rowHTML(loop) {
   const cat = CATEGORIES[loop.category];
   const pt = payType(loop);
   const tag = pt === 'auto' ? '<span class="tag auto">Auto</span>' : pt === 'task' ? '<span class="tag task">Tarea</span>' : '<span class="tag manual">Manual</span>';
-  const meta = `${tag} ${RECURRENCE[loop.recurrence].label}${loop.amount ? ' · ' + money(loop.amount) : ''}`;
+  const meta = `${tag} ${recurLabel(loop)}${loop.amount ? ' · ' + amtLabel(loop) : ''}`;
   return `
     <div class="row" data-id="${loop.id}" style="--st:${st.color}">
       <div class="row-top">
@@ -682,6 +727,37 @@ function tickCountdowns() {
     if (bar) bar.style.width = cd.pct + '%';
     r.style.setProperty('--st', STATES[statusOf(loop)].color);
   });
+}
+
+/* ---------- LOOPS (todos, ordenables) ---------- */
+const SORTS = { priority:'Importancia', date:'Próxima fecha', price:'Precio', interval:'Intervalo', name:'Nombre', category:'Categoría' };
+function bindRows(scope) {
+  scope.querySelectorAll('.row[data-id]').forEach(r => {
+    const id = r.dataset.id;
+    r.onclick = (e) => { if (!e.target.closest('.chk')) openForm(loops.find(l => l.id === id)); };
+    const chk = r.querySelector('.chk'); if (chk) chk.onclick = () => markDone(id);
+  });
+}
+function sortLoops(list) {
+  const a = list.slice();
+  if (loopSort === 'priority') a.sort((x,y) => (STATES[statusOf(x)].order - STATES[statusOf(y)].order) || (daysUntil(x.nextDate) - daysUntil(y.nextDate)));
+  else if (loopSort === 'date') a.sort((x,y) => daysUntil(x.nextDate) - daysUntil(y.nextDate));
+  else if (loopSort === 'price') a.sort((x,y) => (y.amount || 0) - (x.amount || 0));
+  else if (loopSort === 'interval') a.sort((x,y) => cycleDays(x) - cycleDays(y));
+  else if (loopSort === 'name') a.sort((x,y) => x.title.localeCompare(y.title, 'es'));
+  else if (loopSort === 'category') a.sort((x,y) => x.category.localeCompare(y.category) || x.title.localeCompare(y.title, 'es'));
+  return a;
+}
+function renderLoops(v) {
+  const list = sortLoops(loops);
+  const opts = Object.entries(SORTS).map(([k,l]) => `<option value="${k}" ${loopSort===k?'selected':''}>${l}</option>`).join('');
+  v.innerHTML = `
+    <div class="sec-title">Loops</div>
+    <div class="sortbar"><span>${list.length} loop${list.length===1?'':'s'}</span>
+      <select id="loop-sort" aria-label="Ordenar">${opts}</select></div>
+    <div class="list" id="list">${list.length ? list.map(rowHTML).join('') : `<div class="empty"><div class="em">${svg('list')}</div><h3>Sin loops</h3><p>Toca “Nuevo” para crear uno.</p></div>`}</div>`;
+  const sel = v.querySelector('#loop-sort'); sel.onchange = () => { loopSort = sel.value; render(); };
+  bindRows(v);
 }
 
 /* ---------- CALENDARIO ---------- */
@@ -717,35 +793,41 @@ function renderCalendario(v) {
 
 /* ---------- FINANZAS ---------- */
 function renderFinanzas(v) {
+  const def = pref('currency','USD');
   const withAmt = loops.filter(l => l.amount);
-  const monthly = withAmt.reduce((s,l) => s + monthlyCost(l), 0);
-  const autoM = withAmt.filter(l => l.autoPay).reduce((s,l) => s + monthlyCost(l), 0);
+  const byCur = {};
+  withAmt.forEach(l => { const c = l.currency || def; byCur[c] = (byCur[c] || 0) + monthlyCost(l); });
+  const curs = Object.keys(byCur);
+  const primary = byCur[def] !== undefined ? def : (curs.slice().sort((a,b) => byCur[b]-byCur[a])[0] || def);
+  const inPrim = withAmt.filter(l => (l.currency || def) === primary);
+  const monthly = byCur[primary] || 0;
+  const autoM = inPrim.filter(l => l.autoPay).reduce((s,l) => s + monthlyCost(l), 0);
   const manM = monthly - autoM;
-  const byCat = {};
-  withAmt.forEach(l => { byCat[l.category] = (byCat[l.category] || 0) + monthlyCost(l); });
+  const pctAuto = monthly ? Math.round(autoM/monthly*100) : 0;
+  const byCat = {}; inPrim.forEach(l => { byCat[l.category] = (byCat[l.category] || 0) + monthlyCost(l); });
   const maxCat = Math.max(1, ...Object.values(byCat));
   const catRows = Object.entries(byCat).sort((a,b) => b[1]-a[1]).map(([k,val]) => `
-    <div class="brk-row">
-      <span class="bn">${svg(CATEGORIES[k].icon)} ${CATEGORIES[k].label}</span>
-      <span class="bv">${money0(val)}</span>
-    </div>
+    <div class="brk-row"><span class="bn">${svg(CATEGORIES[k].icon)} ${CATEGORIES[k].label}</span><span class="bv">${money0(val, primary)}</span></div>
     <div class="bar"><i style="width:${Math.round(val/maxCat*100)}%"></i></div>`).join('');
-  const pctAuto = monthly ? Math.round(autoM/monthly*100) : 0;
+  const curRows = curs.length > 1 ? `<div class="brk"><h4>Por moneda / mes</h4>${
+    curs.sort((a,b) => byCur[b]-byCur[a]).map(c => `<div class="brk-row"><span class="bn">${c} ${CURRENCIES[c] || ''}</span><span class="bv">${money0(byCur[c], c)} · ${money0(byCur[c]*12, c)}/año</span></div>`).join('')
+  }</div>` : '';
   v.innerHTML = `
     <div class="sec-title">Finanzas</div>
     <div class="hero">
-      <div class="big">${money0(monthly)}</div>
-      <div class="lbl">gasto recurrente al mes</div>
+      <div class="big">${money0(monthly, primary)}</div>
+      <div class="lbl">gasto recurrente al mes${curs.length > 1 ? ' · ' + primary : ''}</div>
       <div class="split">
-        <div><span class="n">${money0(monthly*12)}</span><span class="t">al año</span></div>
-        <div><span class="n">${withAmt.length}</span><span class="t">con monto</span></div>
+        <div><span class="n">${money0(monthly*12, primary)}</span><span class="t">al año</span></div>
+        <div><span class="n">${inPrim.length}</span><span class="t">con monto</span></div>
       </div>
     </div>
     <div class="stat-grid">
-      <div class="stat"><div class="n">${money0(autoM)}</div><div class="t">Automático (${pctAuto}%)</div></div>
-      <div class="stat"><div class="n">${money0(manM)}</div><div class="t">Manual (${100-pctAuto}%)</div></div>
+      <div class="stat"><div class="n">${money0(autoM, primary)}</div><div class="t">Automático (${pctAuto}%)</div></div>
+      <div class="stat"><div class="n">${money0(manM, primary)}</div><div class="t">Manual (${100-pctAuto}%)</div></div>
     </div>
-    <div class="brk"><h4>Por categoría / mes</h4>${catRows || '<p class="sub" style="padding:0">Sin montos aún.</p>'}</div>`;
+    ${curRows}
+    <div class="brk"><h4>Por categoría / mes${curs.length > 1 ? ' (' + primary + ')' : ''}</h4>${catRows || '<p class="sub" style="padding:0">Sin montos aún.</p>'}</div>`;
 }
 
 /* ---------- ESTADÍSTICAS ---------- */
@@ -845,7 +927,8 @@ function renderAjustes(v) {
    ============================================================ */
 function openForm(loop) {
   const isEdit = !!loop;
-  const data = loop || { title:'', category:'subs', icon:'credit-card', amount:'', autoPay: pref('defaultAuto','0')==='1', recurrence:'monthly', nextDate: offsetDate(7), notifyDaysBefore: parseInt(pref('defaultNotify','3'),10) || 3 };
+  const data = loop || { title:'', category:'subs', icon:'credit-card', amount:'', currency: pref('currency','USD'), autoPay: pref('defaultAuto','0')==='1', recur: { n:1, unit:'month' }, nextDate: offsetDate(7), notifyDaysBefore: parseInt(pref('defaultNotify','3'),10) || 3 };
+  const _r = recurOf(data); const ru = _r ? _r.unit : 'none'; const rn = _r ? _r.n : 1;
   const overlay = document.getElementById('modal-overlay'), modal = document.getElementById('modal');
   modal.innerHTML = `
     <h2>${isEdit ? 'Editar Loop' : 'Nuevo Loop'}</h2>
@@ -859,9 +942,22 @@ function openForm(loop) {
     </div></div>
     <div class="field-row">
       <div class="field"><label>Monto (opcional)</label><input id="f-amount" type="number" step="0.01" min="0" placeholder="0.00" value="${data.amount ?? ''}" /></div>
-      <div class="field"><label>Repetición</label><select id="f-recurrence">
-        ${Object.entries(RECURRENCE).map(([k,r]) => `<option value="${k}" ${data.recurrence===k?'selected':''}>${r.label}</option>`).join('')}
+      <div class="field"><label>Moneda</label><select id="f-cur">
+        ${Object.keys(CURRENCIES).map(c => `<option value="${c}" ${(data.currency || pref('currency','USD'))===c?'selected':''}>${c} ${CURRENCIES[c]}</option>`).join('')}
       </select></div>
+    </div>
+    <div class="field"><label>Repetición</label>
+      <div class="field-row" style="gap:10px">
+        <input id="f-rec-n" type="number" min="1" max="999" inputmode="numeric" value="${rn}" style="flex:0 0 88px;text-align:center" />
+        <select id="f-rec-unit" style="flex:1">
+          <option value="none" ${ru==='none'?'selected':''}>No se repite</option>
+          <option value="day" ${ru==='day'?'selected':''}>días</option>
+          <option value="week" ${ru==='week'?'selected':''}>semanas</option>
+          <option value="month" ${ru==='month'?'selected':''}>meses</option>
+          <option value="year" ${ru==='year'?'selected':''}>años</option>
+        </select>
+      </div>
+      <p class="rec-hint" id="rec-hint"></p>
     </div>
     <div class="field"><div class="toggle-row">
       <div><div class="tl">Pago automático</div><div class="ts">Se cobra solo; no tienes que pagarlo a mano.</div></div>
@@ -885,6 +981,12 @@ function openForm(loop) {
     sel.icon = b.dataset.icon; modal.querySelectorAll('#icon-picker button').forEach(x => x.classList.remove('sel')); b.classList.add('sel'); });
   const sw = modal.querySelector('#f-auto');
   sw.onclick = () => { sel.autoPay = !sel.autoPay; sw.classList.toggle('on', sel.autoPay); };
+  const recN = modal.querySelector('#f-rec-n'), recU = modal.querySelector('#f-rec-unit'), recH = modal.querySelector('#rec-hint');
+  function updRec() {
+    recN.style.display = recU.value === 'none' ? 'none' : '';
+    recH.textContent = recU.value === 'none' ? 'No se repite' : recurLabel({ recur: { n: Math.max(1, parseInt(recN.value, 10) || 1), unit: recU.value } });
+  }
+  recU.onchange = updRec; recN.oninput = updRec; updRec();
   const close = () => { overlay.hidden = true; };
   if (isEdit) modal.querySelector('#f-ics').onclick = () => downloadICS([data], 'loop');
   modal.querySelector('#f-cancel').onclick = close;
@@ -894,10 +996,12 @@ function openForm(loop) {
     const title = modal.querySelector('#f-title').value.trim();
     if (!title) { modal.querySelector('#f-title').focus(); return; }
     const amountRaw = modal.querySelector('#f-amount').value;
+    const ruv = modal.querySelector('#f-rec-unit').value;
+    const rnv = Math.max(1, parseInt(modal.querySelector('#f-rec-n').value, 10) || 1);
     upsertLoop({
       id: isEdit ? data.id : undefined, title, category: sel.category, icon: sel.icon,
-      amount: amountRaw === '' ? null : parseFloat(amountRaw), autoPay: sel.autoPay,
-      recurrence: modal.querySelector('#f-recurrence').value, nextDate: modal.querySelector('#f-date').value,
+      amount: amountRaw === '' ? null : parseFloat(amountRaw), currency: modal.querySelector('#f-cur').value, autoPay: sel.autoPay,
+      recur: ruv === 'none' ? { unit: 'none' } : { n: rnv, unit: ruv }, nextDate: modal.querySelector('#f-date').value,
       notifyDaysBefore: parseInt(modal.querySelector('#f-notify').value, 10) || 0,
     });
     close();
@@ -929,8 +1033,10 @@ importFile.onchange = (e) => {
       loops = raw.map(l => ({
         id: l.id || uid(), title: String(l.title || 'Sin nombre'),
         category: CATEGORIES[l.category] ? l.category : 'routine', icon: l.icon || 'repeat',
-        amount: (l.amount === 0 || l.amount) ? Number(l.amount) : null, autoPay: !!l.autoPay,
+        amount: (l.amount === 0 || l.amount) ? Number(l.amount) : null,
+        currency: CURRENCIES[l.currency] ? l.currency : undefined, autoPay: !!l.autoPay,
         recurrence: RECURRENCE[l.recurrence] ? l.recurrence : 'none',
+        recur: (l.recur && l.recur.unit) ? l.recur : undefined,
         nextDate: /^\d{4}-\d{2}-\d{2}$/.test(l.nextDate) ? l.nextDate : offsetDate(7),
         notifyDaysBefore: Number.isFinite(+l.notifyDaysBefore) ? +l.notifyDaysBefore : 3,
         history: Array.isArray(l.history) ? l.history : [],
@@ -951,12 +1057,12 @@ function exportData() {
 /* ---------- Exportar al calendario (Apple / Google) ---------- */
 function icsEsc(s) { return String(s).replace(/[\\;,]/g, m => '\\' + m).replace(/\n/g, '\\n'); }
 function icsStamp() { return new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); }
+function loopRRule(l) { const r = recurOf(l); if (!r) return null; const f = { day:'DAILY', week:'WEEKLY', month:'MONTHLY', year:'YEARLY' }[r.unit]; return 'FREQ=' + f + (r.n > 1 ? ';INTERVAL=' + r.n : ''); }
 function loopVEvent(l) {
-  const RR = { weekly:'FREQ=WEEKLY', biweekly:'FREQ=WEEKLY;INTERVAL=2', monthly:'FREQ=MONTHLY',
-    bimonthly:'FREQ=MONTHLY;INTERVAL=2', quarterly:'FREQ=MONTHLY;INTERVAL=3', biannual:'FREQ=MONTHLY;INTERVAL=6', yearly:'FREQ=YEARLY' }[l.recurrence];
-  const sum = l.title + (l.amount ? ' — ' + money(l.amount) : '');
+  const RR = loopRRule(l);
+  const sum = l.title + (l.amount ? ' — ' + amtLabel(l) : '');
   const cat = CATEGORIES[l.category] ? CATEGORIES[l.category].label : '';
-  const desc = [cat, RECURRENCE[l.recurrence].label, payType(l) === 'auto' ? 'pago automático' : ''].filter(Boolean).join(' · ');
+  const desc = [cat, recurLabel(l), payType(l) === 'auto' ? 'pago automático' : ''].filter(Boolean).join(' · ');
   const e = ['BEGIN:VEVENT', 'UID:' + (l.id || uid()) + '@loopapp', 'DTSTAMP:' + icsStamp(),
     'DTSTART;VALUE=DATE:' + l.nextDate.replace(/-/g, ''), 'SUMMARY:' + icsEsc(sum), 'DESCRIPTION:' + icsEsc(desc)];
   if (RR) e.push('RRULE:' + RR);
@@ -1036,7 +1142,7 @@ applyTheme(pref('theme', 'marfil'));
 document.querySelectorAll('[data-ico]').forEach(el => el.insertAdjacentHTML('afterbegin', svg(el.dataset.ico)));
 render();
 checkDue();
-setInterval(() => { if (activeSection === 'inicio' && document.getElementById('modal-overlay').hidden) tickCountdowns(); }, 1000);
+setInterval(() => { if ((activeSection === 'inicio' || activeSection === 'loops') && document.getElementById('modal-overlay').hidden) tickCountdowns(); }, 1000);
 setInterval(() => { checkDue(); }, 60000);
 
 </script>

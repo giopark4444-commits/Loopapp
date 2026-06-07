@@ -154,6 +154,14 @@ svg { display: block; }
   background-repeat: no-repeat; background-position: right 9px center; background-size: 13px; }
 .pref input[type="number"] { width: 64px; text-align: center; }
 
+.rec-hint { font-size: 12px; color: var(--dim); margin-top: 8px; }
+.sortbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 10px 16px 2px; }
+.sortbar span { font-size: 13px; color: var(--dim); font-weight: 600; }
+.sortbar select { -webkit-appearance: none; appearance: none; background: var(--panel); border: 1px solid var(--line); color: var(--text);
+  border-radius: 10px; padding: 9px 32px 9px 13px; font-family: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2386827a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 11px center; background-size: 13px; }
+
 /* ---------- Drawer ---------- */
 .scrim { position: fixed; inset: 0; background: rgba(38,36,32,.34); z-index: 40; }
 .scrim[hidden] { display: none; }
