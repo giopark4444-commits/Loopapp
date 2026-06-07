@@ -361,8 +361,9 @@ function renderGreeting() {
 function visibleLoops() {
   let list = loops.slice();
   if (activeCategory !== 'all') list = list.filter(l => l.category === activeCategory);
-  if (payFilter === 'manual') list = list.filter(l => payType(l) !== 'auto');
+  if (payFilter === 'manual') list = list.filter(l => payType(l) === 'manual');
   else if (payFilter === 'auto') list = list.filter(l => payType(l) === 'auto');
+  else if (payFilter === 'free') list = list.filter(l => payType(l) === 'task');
   if (searchQuery) list = list.filter(l => l.title.toLowerCase().includes(searchQuery));
   return list.sort((a,b) => {
     const sa = STATES[statusOf(a)].order, sb = STATES[statusOf(b)].order;
@@ -393,7 +394,7 @@ function renderInicio(v) {
       <button class="catsel" id="catsel" aria-haspopup="true">${svg(curCat.icon)}<span>${curCat.label}</span>${svg('chevron-down')}</button>
       <div class="catmenu" id="catmenu" hidden>${catMenu}</div>
     </div>
-    <div class="seg">${seg('all','Todos')}${seg('manual','Manuales')}${seg('auto','Automáticos')}</div>
+    <div class="seg">${seg('all','Todos')}${seg('manual','Manuales')}${seg('auto','Automáticos')}${seg('free','Gratis')}</div>
     <input id="search" class="search-input" type="search" placeholder="Buscar Loop…" autocomplete="off" value="${escapeAttr(searchQuery)}" />
     <div class="list" id="list"></div>`;
 
