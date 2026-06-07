@@ -54,6 +54,7 @@ const ICON = {
   list: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
   wrench: '<path d="M14.7 6.3a4 4 0 0 0-5.6 5.6L3 18l3 3 6.1-6.1a4 4 0 0 0 5.6-5.6l-2.7 2.7-2.5-.5-.5-2.5 2.7-2.7z"/>',
   briefcase: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+  pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>',
 };
 function svg(name) { const i = ICON[name]; return i == null ? '' :
   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${i}</svg>`; }
@@ -89,6 +90,7 @@ function getUserCats() { try { return JSON.parse(localStorage.getItem(USER_CATS_
 function setUserCats(a) { localStorage.setItem(USER_CATS_KEY, JSON.stringify(a)); loadCategories(); }
 function addUserCat(label, icon) { const a = getUserCats(); a.push({ key: 'u_' + Date.now().toString(36), label: String(label).slice(0, 24), icon }); setUserCats(a); }
 function removeUserCat(key) { loops.forEach(l => { if (l.category === key) l.category = 'other'; }); save(); setUserCats(getUserCats().filter(c => c.key !== key)); }
+function editUserCat(key, label, icon) { setUserCats(getUserCats().map(c => c.key === key ? { ...c, label: String(label).slice(0, 24), icon } : c)); }
 loadCategories();
 function catOf(loop) { return CATEGORIES[loop.category] || CATEGORIES.other; }
 const RECURRENCE = {
@@ -141,12 +143,12 @@ function seed() {
     { id: uid(), title: 'Spotify',     category: 'entertainment', icon: 'music',  amount: 11.99, currency: 'EUR', autoPay: true, recurrence: 'monthly', nextDate: d(12), notifyDaysBefore: 5, history: [] },
     { id: uid(), title: 'iCloud+',     category: 'subs',      icon: 'cloud',    amount: 2.99,  autoPay: true,  recurrence: 'monthly', nextDate: d(-1), notifyDaysBefore: 3, history: [] },
     { id: uid(), title: 'Dominio web', category: 'business',  icon: 'globe',    amount: 12,    autoPay: false, recurrence: 'yearly',  nextDate: d(40), notifyDaysBefore: 14, history: [] },
-    { id: uid(), title: 'Alquiler',    category: 'home',      icon: 'home',     amount: 800,   autoPay: false, recurrence: 'monthly', nextDate: d(8),  notifyDaysBefore: 5, history: [] },
+    { id: uid(), title: 'Alquiler',    category: 'home',      icon: 'home',     amount: 800,   autoPay: false, recurrence: 'monthly', nextDate: d(8),  notifyDaysBefore: 5, notes: 'Transferencia al casero', history: [] },
     { id: uid(), title: 'Internet',    category: 'services',  icon: 'globe',    amount: 45,    autoPay: false, recurrence: 'monthly', nextDate: d(1),  notifyDaysBefore: 3, history: [] },
     { id: uid(), title: 'Seguro auto', category: 'transport', icon: 'shield',   amount: 90,    autoPay: false, recurrence: 'monthly', nextDate: d(-2), notifyDaysBefore: 4, history: [] },
     { id: uid(), title: 'Tarjeta Visa', category: 'credit',   icon: 'landmark', amount: 250,   autoPay: false, recurrence: 'monthly', nextDate: d(15), notifyDaysBefore: 5, history: [] },
     { id: uid(), title: 'Permiso de circulación', category: 'transport', icon: 'file', amount: 35, autoPay: false, recurrence: 'yearly', nextDate: d(75), notifyDaysBefore: 14, history: [] },
-    { id: uid(), title: 'Gimnasio',    category: 'health',    icon: 'dumbbell', amount: 30,    autoPay: true,  recurrence: 'monthly', nextDate: d(6),  notifyDaysBefore: 3, history: [] },
+    { id: uid(), title: 'Gimnasio',    category: 'health',    icon: 'dumbbell', amount: 30,    autoPay: true,  recurrence: 'monthly', nextDate: d(6),  notifyDaysBefore: 3, notes: '3 veces por semana', history: [] },
     { id: uid(), title: 'Regar plantas', category: 'routine', icon: 'leaf',     amount: null,  autoPay: false, recurrence: 'weekly',  nextDate: d(2),  notifyDaysBefore: 1, history: [] },
     { id: uid(), title: 'Cambiar filtro A/C', category: 'maintenance', icon: 'wrench', amount: null, autoPay: false, recurrence: 'yearly', nextDate: d(60), notifyDaysBefore: 14, history: [] },
     { id: uid(), title: 'Comprar regalo', category: 'shopping', icon: 'gift', amount: null,  autoPay: false, recurrence: 'none',    nextDate: d(5),  notifyDaysBefore: 2, history: [] },
@@ -373,6 +375,18 @@ function visibleLoops() {
   });
 }
 function renderInicio(v) {
+  if (!loops.length) {
+    v.innerHTML = `<div class="welcome">
+      <div class="wc-logo">${svg('repeat')}</div>
+      <h2>Bienvenido a Loopapp</h2>
+      <p>Todo lo que se repite —pagos, suscripciones, rutinas, recados— en un solo lugar, con cuenta regresiva, prioridad y avisos.</p>
+      <button class="btn btn-primary" id="wc-new">Crear mi primer Loop</button>
+      <button class="wc-link" id="wc-seed">Ver con datos de ejemplo</button>
+    </div>`;
+    v.querySelector('#wc-new').onclick = () => openForm(null);
+    v.querySelector('#wc-seed').onclick = () => { loops = seed(); save(); render(); };
+    return;
+  }
   const def = pref('currency','USD');
   const overdue = loops.filter(l => statusOf(l)==='overdue').length;
   const urgent = loops.filter(l => statusOf(l)==='urgent').length;
@@ -438,6 +452,7 @@ function rowHTML(loop) {
         <div class="mid">
           <div class="t">${escapeHtml(loop.title)}</div>
           <div class="m">${meta}</div>
+          ${loop.notes ? `<div class="note">${escapeHtml(loop.notes)}</div>` : ''}
         </div>
         <div class="right">
           <div class="cd">${cd.big}</div>
@@ -583,6 +598,12 @@ function renderStats(v) {
   const pendientes = counts.overdue + counts.urgent + counts.upcoming;
   const pagados = getDone().length;
   const manualesPend = loops.filter(l => payType(l)!=='auto' && ['overdue','urgent','upcoming'].includes(statusOf(l))).length;
+  const order = ['overdue','urgent','upcoming','ok'];
+  const statusBar = `<div class="statusbar">${order.filter(k => counts[k]).map(k => `<span style="flex:${counts[k]};background:${STATES[k].color}" title="${STATES[k].label}: ${counts[k]}"></span>`).join('') || '<span style="flex:1;background:var(--line2)"></span>'}</div>`;
+  const legend = `<div class="legend">${order.map(k => `<span><i style="background:${STATES[k].color}"></i>${STATES[k].label} ${counts[k]}</span>`).join('')}</div>`;
+  const load = monthlyLoad();
+  const maxL = Math.max(1, ...load.map(x => x.count));
+  const chart = `<div class="chart">${load.map(x => `<div class="chart-col"><div class="chart-bar" style="height:${Math.max(3, Math.round(x.count/maxL*100))}px"></div><div class="chart-n">${x.count}</div><div class="chart-l">${x.label}</div></div>`).join('')}</div>`;
   v.innerHTML = `
     <div class="sec-title">Estadísticas</div>
     <div class="stat-grid">
@@ -593,10 +614,19 @@ function renderStats(v) {
       <div class="stat"><div class="n">${pagados}</div><div class="t">completados</div></div>
       <div class="stat"><div class="n">${total}</div><div class="t">loops activos</div></div>
     </div>
-    <div class="brk"><h4>Por estado</h4>
-      ${['overdue','urgent','upcoming','ok'].map(k => `
-        <div class="brk-row"><span class="bn"><span style="width:10px;height:10px;border-radius:50%;background:${STATES[k].color};display:inline-block"></span> ${STATES[k].label}</span><span class="bv">${counts[k]}</span></div>`).join('')}
-    </div>`;
+    <div class="brk"><h4>Estado general</h4>${statusBar}${legend}</div>
+    <div class="brk"><h4>Carga próximos 6 meses</h4>${chart}</div>`;
+}
+function monthlyLoad() {
+  const out = [], base = new Date(); base.setDate(1);
+  for (let m = 0; m < 6; m++) {
+    const d0 = new Date(base.getFullYear(), base.getMonth() + m, 1);
+    const days = new Date(d0.getFullYear(), d0.getMonth() + 1, 0).getDate();
+    let count = 0;
+    for (let day = 1; day <= days; day++) { const date = new Date(d0.getFullYear(), d0.getMonth(), day); count += loops.filter(l => occursOn(l, date)).length; }
+    out.push({ label: d0.toLocaleDateString('es', { month: 'short' }), count });
+  }
+  return out;
 }
 
 /* ---------- HISTORIAL ---------- */
@@ -643,7 +673,7 @@ function renderAjustes(v) {
     </div>
     <div class="brk"><h4>Categorías</h4>
       <div class="catlist">
-        ${Object.keys(CATEGORIES).map(k => `<div class="catrow">${svg(CATEGORIES[k].icon)}<span>${CATEGORIES[k].label}</span>${CATEGORIES[k].custom ? `<button class="catdel" data-cat="${k}" aria-label="Eliminar">${svg('trash')}</button>` : ''}</div>`).join('')}
+        ${Object.keys(CATEGORIES).map(k => `<div class="catrow">${svg(CATEGORIES[k].icon)}<span>${CATEGORIES[k].label}</span>${CATEGORIES[k].custom ? `<button class="catedit" data-cat="${k}" aria-label="Editar">${svg('pencil')}</button><button class="catdel" data-cat="${k}" aria-label="Eliminar">${svg('trash')}</button>` : ''}</div>`).join('')}
       </div>
       <button class="opt" id="o-addcat">${svg('plus')} Agregar categoría</button>
     </div>
@@ -674,8 +704,9 @@ function renderAjustes(v) {
   v.querySelector('#p-cur').onchange = (e) => { setPref('currency', e.target.value); render(); };
   v.querySelector('#p-notify').onchange = (e) => { setPref('defaultNotify', String(Math.max(0, Math.min(60, parseInt(e.target.value) || 0)))); };
   const pa = v.querySelector('#p-auto'); pa.onclick = () => { const on = pref('defaultAuto','0') !== '1'; setPref('defaultAuto', on?'1':'0'); pa.classList.toggle('on', on); };
+  v.querySelectorAll('.catedit').forEach(b => b.onclick = () => openCatForm(b.dataset.cat));
   v.querySelectorAll('.catdel').forEach(b => b.onclick = () => { if (confirm('¿Eliminar esta categoría? Los loops que la usen pasarán a "Otros".')) { removeUserCat(b.dataset.cat); render(); } });
-  v.querySelector('#o-addcat').onclick = openCatForm;
+  v.querySelector('#o-addcat').onclick = () => openCatForm();
   v.querySelector('#o-ics').onclick = () => { if (!loops.length) { alert('No hay Loops que exportar.'); return; } downloadICS(loops, 'loopapp'); };
   const subBtn = v.querySelector('#o-calsub'); if (subBtn) subBtn.onclick = enableCal;
   const calopen = v.querySelector('#o-calopen'); if (calopen) calopen.onclick = () => { location.href = webcalUrl(); };
@@ -694,7 +725,7 @@ function renderAjustes(v) {
    ============================================================ */
 function openForm(loop, opts) {
   const isEdit = !!loop;
-  const data = loop || { title:'', category:'subs', icon:'credit-card', amount:'', currency: pref('currency','USD'), autoPay: pref('defaultAuto','0')==='1', recur: { n:1, unit:'month' }, nextDate: (opts && opts.date) || offsetDate(7), notifyDaysBefore: parseInt(pref('defaultNotify','3'),10) || 3 };
+  const data = loop || { title:'', category:'subs', icon:'credit-card', amount:'', currency: pref('currency','USD'), autoPay: pref('defaultAuto','0')==='1', recur: { n:1, unit:'month' }, nextDate: (opts && opts.date) || offsetDate(7), notifyDaysBefore: parseInt(pref('defaultNotify','3'),10) || 3, notes: '' };
   const _r = recurOf(data); const ru = _r ? _r.unit : 'none'; const rn = _r ? _r.n : 1;
   const overlay = document.getElementById('modal-overlay'), modal = document.getElementById('modal');
   modal.innerHTML = `
@@ -734,6 +765,7 @@ function openForm(loop, opts) {
       <div class="field"><label>Próxima fecha</label><input id="f-date" type="date" value="${data.nextDate}" /></div>
       <div class="field"><label>Avisar (días antes)</label><input id="f-notify" type="number" min="0" max="60" value="${data.notifyDaysBefore ?? 3}" /></div>
     </div>
+    <div class="field"><label>Notas (opcional)</label><textarea id="f-notes" rows="2" placeholder="Ej. número de cuenta, recordatorio, link…">${escapeHtml(data.notes || '')}</textarea></div>
     ${isEdit ? `<button type="button" class="btn btn-ghost" id="f-ics" style="width:100%;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px">${svg('calendar')} Añadir al calendario</button>` : ''}
     <div class="modal-actions">
       ${isEdit ? `<button class="btn btn-danger" id="f-delete">Eliminar</button>` : ''}
@@ -770,25 +802,27 @@ function openForm(loop, opts) {
       amount: amountRaw === '' ? null : parseFloat(amountRaw), currency: modal.querySelector('#f-cur').value, autoPay: sel.autoPay,
       recur: ruv === 'none' ? { unit: 'none' } : { n: rnv, unit: ruv }, nextDate: modal.querySelector('#f-date').value,
       notifyDaysBefore: parseInt(modal.querySelector('#f-notify').value, 10) || 0,
+      notes: modal.querySelector('#f-notes').value.trim(),
     });
     close();
   };
 }
 
 /* ---------- Crear categoría personalizada ---------- */
-function openCatForm() {
+function openCatForm(edit) {
   const overlay = document.getElementById('modal-overlay'), modal = document.getElementById('modal');
-  let selIcon = 'star';
+  const cur = edit && CATEGORIES[edit] ? CATEGORIES[edit] : null;
+  let selIcon = cur ? cur.icon : 'star';
   modal.innerHTML = `
-    <h2>Nueva categoría</h2>
+    <h2>${cur ? 'Editar categoría' : 'Nueva categoría'}</h2>
     <p class="modal-sub">Crea una categoría a tu medida.</p>
-    <div class="field"><label>Nombre</label><input id="c-name" placeholder="Ej. Mascotas, Educación, Donaciones" maxlength="24" /></div>
+    <div class="field"><label>Nombre</label><input id="c-name" placeholder="Ej. Mascotas, Educación, Donaciones" maxlength="24" value="${cur ? escapeAttr(cur.label) : ''}" /></div>
     <div class="field"><label>Icono</label><div class="icon-picker" id="c-icons">
-      ${ICONS.map(i => `<button data-icon="${i}" class="${i==='star'?'sel':''}">${svg(i)}</button>`).join('')}
+      ${ICONS.map(i => `<button data-icon="${i}" class="${i===selIcon?'sel':''}">${svg(i)}</button>`).join('')}
     </div></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" id="c-cancel">Cancelar</button>
-      <button class="btn btn-primary" id="c-save">Crear</button>
+      <button class="btn btn-primary" id="c-save">${cur ? 'Guardar' : 'Crear'}</button>
     </div>`;
   overlay.hidden = false;
   modal.querySelectorAll('#c-icons button').forEach(b => b.onclick = () => { selIcon = b.dataset.icon; modal.querySelectorAll('#c-icons button').forEach(x => x.classList.remove('sel')); b.classList.add('sel'); });
@@ -798,7 +832,8 @@ function openCatForm() {
   modal.querySelector('#c-save').onclick = () => {
     const name = modal.querySelector('#c-name').value.trim();
     if (!name) { modal.querySelector('#c-name').focus(); return; }
-    addUserCat(name, selIcon); close(); render();
+    if (edit) editUserCat(edit, name, selIcon); else addUserCat(name, selIcon);
+    close(); render();
   };
 }
 
@@ -837,6 +872,7 @@ importFile.onchange = (e) => {
         recur: (l.recur && l.recur.unit) ? l.recur : undefined,
         nextDate: /^\d{4}-\d{2}-\d{2}$/.test(l.nextDate) ? l.nextDate : offsetDate(7),
         notifyDaysBefore: Number.isFinite(+l.notifyDaysBefore) ? +l.notifyDaysBefore : 3,
+        notes: String(l.notes || '').slice(0, 500),
         history: Array.isArray(l.history) ? l.history : [],
       }));
       save(); render();
