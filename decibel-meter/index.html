@@ -179,6 +179,16 @@
   .cal .actions{ display:flex; gap:9px; margin-top:6px;}
   .cal .actions .btn{ flex:1; }
   .cal .btn.dim{ background:linear-gradient(180deg,#d8c69a,#bda468); box-shadow:0 2px 0 #8a7038;}
+  .cal .presets-row{ border-top:1px dashed #c3aa74; padding-top:14px; margin-top:4px;}
+  .cal .presets-hint{ font-size:10.5px; color:#8a6f44; margin:-2px 0 10px; line-height:1.5;}
+  .presets{ display:flex; flex-wrap:wrap; gap:7px;}
+  .chip{ flex:1 1 28%; cursor:pointer; border:1px solid #c3aa74; border-radius:10px;
+    background:#fffaf0; color:#2a1d10; padding:8px 6px; font-size:11px; font-weight:700;
+    display:flex; flex-direction:column; align-items:center; gap:2px; line-height:1.1;
+    box-shadow:0 1px 2px rgba(0,0,0,.12); transition:transform .06s, background .1s;}
+  .chip small{ font-family:"Courier New",monospace; font-size:9.5px; color:#9a4318; font-weight:700;}
+  .chip:hover{ background:#fff3da;}
+  .chip:active{ transform:translateY(1px); background:var(--brass-light);}
   .cal .hint{ font-size:10.5px; color:#8a6f44; margin-top:12px; line-height:1.5; border-top:1px dashed #c3aa74; padding-top:10px;}
   .cal .close{ position:absolute; top:12px; right:14px; cursor:pointer; font-size:22px; color:#9a7c4a; border:none; background:none; line-height:1;}
 
@@ -284,7 +294,19 @@
         <button class="btn dim" id="calReset">Restablecer</button>
       </div>
 
-      <div class="hint">Consejo: en silencio total un ambiente ronda 30 dB, una conversación 60 dB, tráfico intenso 85 dB. Si no tienes sonómetro, usa el deslizador hasta que la aguja coincida con un nivel conocido.</div>
+      <div class="row presets-row">
+        <label>¿No tienes sonómetro? Calibra con un sonido conocido</label>
+        <p class="presets-hint">Coloca el teléfono en la situación indicada y toca el botón: la app mide ~1&nbsp;s y ajusta la escala a ese nivel típico.</p>
+        <div class="presets" id="presets">
+          <button class="chip" data-db="30">🤫 Silencio<small>30 dB</small></button>
+          <button class="chip" data-db="40">😶 Susurro<small>40 dB</small></button>
+          <button class="chip" data-db="60">🗣️ Conversación<small>60 dB</small></button>
+          <button class="chip" data-db="75">🚗 Tráfico<small>75 dB</small></button>
+          <button class="chip" data-db="85">🏙️ Calle ruidosa<small>85 dB</small></button>
+        </div>
+      </div>
+
+      <div class="hint">Consejo: también puedes mover el deslizador a mano hasta que la aguja coincida con un nivel que conozcas. La calibración se guarda automáticamente.</div>
     </div>
   </div>
 
@@ -569,16 +591,35 @@
     saveOffset();
   });
 
-  document.getElementById('calApply').addEventListener('click', ()=>{
+  let calibrating=false;
+  // Promedia la lectura ~1 s y ajusta el offset para que el nivel actual = refDb
+  function calibrateTo(refDb, label){
     if(!running){ flashHint('Enciende el medidor para calibrar.'); return; }
+    if(calibrating) return;
+    calibrating=true;
+    flashHint('Midiendo referencia…');
+    const samples=[]; const t0=performance.now();
+    (function sample(){
+      samples.push(measure()-offset);       // nivel relativo (sin offset)
+      if(performance.now()-t0<900){ setTimeout(sample,40); return; }
+      const rel=samples.reduce((a,b)=>a+b,0)/samples.length;
+      offset = refDb - rel;
+      saveOffset(); syncOffUI();
+      calibrating=false;
+      flashHint('Calibrado con '+label+': ahora marca ~'+refDb.toFixed(0)+' dB.');
+      overlay.classList.remove('show');
+    })();
+  }
+
+  document.getElementById('calApply').addEventListener('click', ()=>{
     const ref=parseFloat(calRef.value);
     if(isNaN(ref)){ flashHint('Escribe el valor de tu sonómetro de referencia.'); return; }
-    // lectura actual SIN offset = dbfs ponderado; recalculamos offset para que coincida con ref
-    const dbfs = measure() - offset;        // quitar offset actual → nivel relativo
-    offset = ref - dbfs;
-    saveOffset(); syncOffUI();
-    flashHint('Calibrado: ahora marca '+ref.toFixed(1)+' dB.');
-    overlay.classList.remove('show');
+    calibrateTo(ref, 'la referencia');
+  });
+
+  // calibración rápida con sonidos conocidos
+  document.querySelectorAll('#presets .chip').forEach(c=>{
+    c.addEventListener('click', ()=> calibrateTo(parseFloat(c.dataset.db), c.textContent.replace(/\d+\s*dB/,'').trim()));
   });
 
   document.getElementById('calReset').addEventListener('click', ()=>{
