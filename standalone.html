@@ -62,6 +62,15 @@ svg { display: block; }
   padding: 8px; border-radius: 10px; font-size: 12.5px; font-weight: 700; font-family: inherit; cursor: pointer; }
 .seg button.on { background: var(--text); border-color: var(--text); color: var(--bg); }
 
+/* ---------- Chips de categoría ---------- */
+.cats { display: flex; gap: 8px; overflow-x: auto; padding: 12px 16px 2px; scrollbar-width: none; }
+.cats::-webkit-scrollbar { display: none; }
+.catchip { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; background: var(--panel); border: 1px solid var(--line);
+  color: var(--dim); padding: 7px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 700; cursor: pointer; white-space: nowrap; font-family: inherit; }
+.catchip svg { width: 14px; height: 14px; }
+.catchip.on { background: var(--text); border-color: var(--text); color: var(--bg); }
+.catchip.on svg { color: var(--bg); }
+
 /* ---------- Buscador ---------- */
 .search-input { width: calc(100% - 32px); margin: 10px 16px 0; background-color: var(--panel);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2386827a' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
@@ -365,6 +374,8 @@ const ICON = {
   key: '<circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6"/><path d="M15.5 7.5l3 3L22 7l-3-3"/>',
   bike: '<circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM12 17.5V14l-3-3 4-3 2 3h2"/>',
   list: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
+  wrench: '<path d="M14.7 6.3a4 4 0 0 0-5.6 5.6L3 18l3 3 6.1-6.1a4 4 0 0 0 5.6-5.6l-2.7 2.7-2.5-.5-.5-2.5 2.7-2.7z"/>',
+  briefcase: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
 };
 function svg(name) { const i = ICON[name]; return i == null ? '' :
   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${i}</svg>`; }
@@ -372,14 +383,24 @@ function renderIcon(name) { return ICON[name] ? svg(name) : `<span class="emoji-
 
 /* ---------- Categorías / recurrencia / estados ---------- */
 const CATEGORIES = {
-  subs:     { label: 'Suscripciones', icon: 'credit-card' },
-  money:    { label: 'Alquiler / Servicios', icon: 'wallet' },
-  credit:   { label: 'Créditos / Deudas', icon: 'landmark' },
-  vehicle:  { label: 'Vehículo', icon: 'car' },
-  routine:  { label: 'Rutinas', icon: 'repeat' },
-  home:     { label: 'Hogar', icon: 'home' },
-  shopping: { label: 'Compras', icon: 'shopping-bag' },
+  entertainment: { label: 'Entretenimiento', icon: 'tv' },
+  subs:          { label: 'Suscripciones',    icon: 'credit-card' },
+  services:      { label: 'Servicios',        icon: 'zap' },
+  home:          { label: 'Hogar',            icon: 'home' },
+  maintenance:   { label: 'Mantenimiento',    icon: 'wrench' },
+  health:        { label: 'Salud',            icon: 'heart' },
+  meds:          { label: 'Medicamentos',     icon: 'pill' },
+  transport:     { label: 'Transporte',       icon: 'car' },
+  credit:        { label: 'Créditos / Deudas',icon: 'landmark' },
+  taxes:         { label: 'Impuestos',        icon: 'file' },
+  business:      { label: 'Empresa / Trabajo',icon: 'briefcase' },
+  shopping:      { label: 'Compras',          icon: 'shopping-bag' },
+  routine:       { label: 'Rutinas / Tareas', icon: 'repeat' },
+  other:         { label: 'Otros',            icon: 'star' },
 };
+// Migración de claves de categoría antiguas
+const CAT_MIGRATE = { money: 'services', vehicle: 'transport' };
+function catOf(loop) { return CATEGORIES[loop.category] || CATEGORIES.other; }
 const RECURRENCE = {
   none:      { label: 'Sin repetir',    perMonth: 0 },
   weekly:    { label: 'Semanal',        perMonth: 4.3333 },
@@ -407,32 +428,36 @@ const ICONS = ['credit-card','landmark','wallet','tv','music','cloud','smartphon
 let loops = load();
 let activeSection = 'inicio';
 let payFilter = 'all';   // all | manual | auto
+let activeCategory = 'all';
 let searchQuery = '';
 let calOffset = 0;
 let loopSort = 'priority';
 
 /* ---------- Persistencia ---------- */
 function load() {
-  try { const raw = localStorage.getItem(STORE_KEY); if (raw) return JSON.parse(raw); } catch (e) {}
-  return seed();
+  let arr;
+  try { const raw = localStorage.getItem(STORE_KEY); if (raw) arr = JSON.parse(raw); } catch (e) {}
+  if (!Array.isArray(arr)) return seed();
+  arr.forEach(l => { if (CAT_MIGRATE[l.category]) l.category = CAT_MIGRATE[l.category]; if (!CATEGORIES[l.category]) l.category = 'other'; });
+  return arr;
 }
 function save() { localStorage.setItem(STORE_KEY, JSON.stringify(loops)); scheduleSync(); }
 
 function seed() {
   const d = offsetDate;
   return [
-    { id: uid(), title: 'Netflix',     category: 'subs',    icon: 'tv',       amount: 15.99, autoPay: true,  recurrence: 'monthly', nextDate: d(3),  notifyDaysBefore: 5, history: [] },
-    { id: uid(), title: 'Spotify',     category: 'subs',    icon: 'music',    amount: 11.99, currency: 'EUR', autoPay: true,  recurrence: 'monthly', nextDate: d(12), notifyDaysBefore: 5, history: [] },
-    { id: uid(), title: 'iCloud+',     category: 'subs',    icon: 'cloud',    amount: 2.99,  autoPay: true,  recurrence: 'monthly', nextDate: d(-1), notifyDaysBefore: 3, history: [] },
-    { id: uid(), title: 'Dominio web', category: 'subs',    icon: 'globe',    amount: 12,    autoPay: false, recurrence: 'yearly',  nextDate: d(40), notifyDaysBefore: 14, history: [] },
-    { id: uid(), title: 'Alquiler',    category: 'money',   icon: 'home',     amount: 800,   autoPay: false, recurrence: 'monthly', nextDate: d(8),  notifyDaysBefore: 5, history: [] },
-    { id: uid(), title: 'Internet',    category: 'money',   icon: 'globe',    amount: 45,    autoPay: false, recurrence: 'monthly', nextDate: d(1),  notifyDaysBefore: 3, history: [] },
-    { id: uid(), title: 'Seguro auto', category: 'vehicle', icon: 'shield',   amount: 90,    autoPay: false, recurrence: 'monthly', nextDate: d(-2), notifyDaysBefore: 4, history: [] },
-    { id: uid(), title: 'Tarjeta Visa', category: 'credit', icon: 'landmark', amount: 250,   autoPay: false, recurrence: 'monthly', nextDate: d(15), notifyDaysBefore: 5, history: [] },
-    { id: uid(), title: 'Permiso de circulación', category: 'vehicle', icon: 'file', amount: 35, autoPay: false, recurrence: 'yearly', nextDate: d(75), notifyDaysBefore: 14, history: [] },
-    { id: uid(), title: 'Gimnasio',    category: 'routine', icon: 'dumbbell', amount: 30,    autoPay: true,  recurrence: 'monthly', nextDate: d(6),  notifyDaysBefore: 3, history: [] },
-    { id: uid(), title: 'Regar plantas', category: 'home',  icon: 'leaf',     amount: null,  autoPay: false, recurrence: 'weekly',  nextDate: d(2),  notifyDaysBefore: 1, history: [] },
-    { id: uid(), title: 'Cambiar filtro A/C', category: 'home', icon: 'trash', amount: null, autoPay: false, recurrence: 'yearly', nextDate: d(60), notifyDaysBefore: 14, history: [] },
+    { id: uid(), title: 'Netflix',     category: 'entertainment', icon: 'tv',     amount: 15.99, autoPay: true,  recurrence: 'monthly', nextDate: d(3),  notifyDaysBefore: 5, history: [] },
+    { id: uid(), title: 'Spotify',     category: 'entertainment', icon: 'music',  amount: 11.99, currency: 'EUR', autoPay: true, recurrence: 'monthly', nextDate: d(12), notifyDaysBefore: 5, history: [] },
+    { id: uid(), title: 'iCloud+',     category: 'subs',      icon: 'cloud',    amount: 2.99,  autoPay: true,  recurrence: 'monthly', nextDate: d(-1), notifyDaysBefore: 3, history: [] },
+    { id: uid(), title: 'Dominio web', category: 'business',  icon: 'globe',    amount: 12,    autoPay: false, recurrence: 'yearly',  nextDate: d(40), notifyDaysBefore: 14, history: [] },
+    { id: uid(), title: 'Alquiler',    category: 'home',      icon: 'home',     amount: 800,   autoPay: false, recurrence: 'monthly', nextDate: d(8),  notifyDaysBefore: 5, history: [] },
+    { id: uid(), title: 'Internet',    category: 'services',  icon: 'globe',    amount: 45,    autoPay: false, recurrence: 'monthly', nextDate: d(1),  notifyDaysBefore: 3, history: [] },
+    { id: uid(), title: 'Seguro auto', category: 'transport', icon: 'shield',   amount: 90,    autoPay: false, recurrence: 'monthly', nextDate: d(-2), notifyDaysBefore: 4, history: [] },
+    { id: uid(), title: 'Tarjeta Visa', category: 'credit',   icon: 'landmark', amount: 250,   autoPay: false, recurrence: 'monthly', nextDate: d(15), notifyDaysBefore: 5, history: [] },
+    { id: uid(), title: 'Permiso de circulación', category: 'transport', icon: 'file', amount: 35, autoPay: false, recurrence: 'yearly', nextDate: d(75), notifyDaysBefore: 14, history: [] },
+    { id: uid(), title: 'Gimnasio',    category: 'health',    icon: 'dumbbell', amount: 30,    autoPay: true,  recurrence: 'monthly', nextDate: d(6),  notifyDaysBefore: 3, history: [] },
+    { id: uid(), title: 'Regar plantas', category: 'routine', icon: 'leaf',     amount: null,  autoPay: false, recurrence: 'weekly',  nextDate: d(2),  notifyDaysBefore: 1, history: [] },
+    { id: uid(), title: 'Cambiar filtro A/C', category: 'maintenance', icon: 'wrench', amount: null, autoPay: false, recurrence: 'yearly', nextDate: d(60), notifyDaysBefore: 14, history: [] },
     { id: uid(), title: 'Comprar regalo', category: 'shopping', icon: 'gift', amount: null,  autoPay: false, recurrence: 'none',    nextDate: d(5),  notifyDaysBefore: 2, history: [] },
   ];
 }
@@ -645,6 +670,7 @@ function renderGreeting() {
 /* ---------- INICIO ---------- */
 function visibleLoops() {
   let list = loops.slice();
+  if (activeCategory !== 'all') list = list.filter(l => l.category === activeCategory);
   if (payFilter === 'manual') list = list.filter(l => payType(l) !== 'auto');
   else if (payFilter === 'auto') list = list.filter(l => payType(l) === 'auto');
   if (searchQuery) list = list.filter(l => l.title.toLowerCase().includes(searchQuery));
@@ -655,23 +681,29 @@ function visibleLoops() {
   });
 }
 function renderInicio(v) {
+  const def = pref('currency','USD');
   const overdue = loops.filter(l => statusOf(l)==='overdue').length;
   const urgent = loops.filter(l => statusOf(l)==='urgent').length;
-  const monthly = loops.reduce((s,l) => s + monthlyCost(l), 0);
+  const monthly = loops.filter(l => (l.currency||def)===def).reduce((s,l) => s + monthlyCost(l), 0);
   const manuales = loops.filter(l => payType(l) !== 'auto').length;
   const seg = (k,t) => `<button class="${payFilter===k?'on':''}" data-pay="${k}">${t}</button>`;
+  const cchip = (key,label,icon) => `<button class="catchip ${activeCategory===key?'on':''}" data-cat="${key}">${icon ? svg(icon) : ''}<span>${label}</span></button>`;
+  let chips = cchip('all','Todos','list');
+  Object.keys(CATEGORIES).forEach(k => { if (loops.some(l => l.category === k)) chips += cchip(k, CATEGORIES[k].label, CATEGORIES[k].icon); });
 
   v.innerHTML = `
     <div class="sum">
       ${overdue ? `<span class="red">● ${overdue} vencido${overdue>1?'s':''}</span>` : ''}
       ${urgent ? `<span>● ${urgent} urgente${urgent>1?'s':''}</span>` : ''}
-      <span><b>${money0(monthly)}</b> / mes</span>
+      <span><b>${money0(monthly, def)}</b> / mes</span>
       <span><b>${manuales}</b> manuales</span>
     </div>
+    <div class="cats">${chips}</div>
     <div class="seg">${seg('all','Todos')}${seg('manual','Manuales')}${seg('auto','Automáticos')}</div>
     <input id="search" class="search-input" type="search" placeholder="Buscar Loop…" autocomplete="off" value="${escapeAttr(searchQuery)}" />
     <div class="list" id="list"></div>`;
 
+  v.querySelectorAll('.catchip').forEach(b => b.onclick = () => { activeCategory = b.dataset.cat; render(); });
   v.querySelectorAll('.seg button').forEach(b => b.onclick = () => { payFilter = b.dataset.pay; render(); });
   const s = v.querySelector('#search');
   s.oninput = (e) => { searchQuery = e.target.value.trim().toLowerCase(); renderList(); };
@@ -697,7 +729,7 @@ function renderList() {
 function rowHTML(loop) {
   const st = STATES[statusOf(loop)];
   const cd = cdParts(loop);
-  const cat = CATEGORIES[loop.category];
+  const cat = catOf(loop);
   const pt = payType(loop);
   const tag = pt === 'auto' ? '<span class="tag auto">Auto</span>' : pt === 'task' ? '<span class="tag task">Tarea</span>' : '<span class="tag manual">Manual</span>';
   const meta = `${tag} ${recurLabel(loop)}${loop.amount ? ' · ' + amtLabel(loop) : ''}`;
