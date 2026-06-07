@@ -23,6 +23,8 @@ Abre `index.html` en un navegador (Chrome, Safari, Firefox) y pulsa
   y carátula color marfil con zonas verde/amarillo/naranja/roja.
 - **Lector digital LCD** con nivel actual, pico, promedio y mínimo.
 - **Escalera de LEDs** con retención de pico (peak-hold).
+- **Osciloscopio / historial** estilo tubo de fósforo verde que traza el nivel
+  de los últimos 30 segundos.
 - **Ponderación A / Z** — dB(A) aproxima la sensibilidad del oído humano;
   dB(Z) es respuesta plana.
 - **Modo de calibración**: introduce el valor de un sonómetro de referencia y
