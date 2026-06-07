@@ -370,6 +370,7 @@ function closeDrawer() { document.getElementById('scrim').hidden = true; drawer(
    ============================================================ */
 function render() {
   renderGreeting();
+  renderNav();
   const v = document.getElementById('view');
   if (activeSection === 'inicio') return renderInicio(v);
   if (activeSection === 'loops') return renderLoops(v);

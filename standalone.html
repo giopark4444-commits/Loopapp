@@ -344,6 +344,33 @@ body[data-theme="oceano"] {
 @media (prefers-reduced-motion: reduce) { .row, .stat, .brk-row, .drawer { animation: none; transition: none; } }
 ::-webkit-scrollbar { width: 6px; height: 6px; } ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
 
+/* ===========================================================
+   Móvil: áreas seguras y taps
+   =========================================================== */
+body { -webkit-tap-highlight-color: transparent; }
+.hd { padding-top: max(22px, env(safe-area-inset-top)); }
+
+/* ===========================================================
+   Escritorio: menú lateral fijo + contenido en 2 columnas
+   =========================================================== */
+@media (min-width: 900px) {
+  .burger { display: none; }
+  .scrim { display: none !important; }
+  .drawer { position: fixed; top: 0; left: 0; bottom: 0; width: 256px; transform: none !important;
+    box-shadow: none; border-right: 1px solid var(--line); padding: 26px 16px; overflow-y: auto; }
+  #app { margin-left: 256px; max-width: 960px; padding: 0 32px 48px; }
+  .hd { padding-left: 6px; padding-right: 6px; }
+  .list { display: grid; grid-template-columns: 1fr 1fr; column-gap: 26px; }
+  .stat-grid { grid-template-columns: repeat(3, 1fr); }
+  .catbar, .seg, .search-input { max-width: 560px; }
+  .hero { max-width: 620px; }
+  .cal-grid { max-width: 680px; }
+  .modal { max-width: 600px; }
+}
+@media (min-width: 1320px) {
+  #app { margin-left: 300px; margin-right: auto; }
+}
+
 </style>
 </head>
 <body>
@@ -763,6 +790,7 @@ function closeDrawer() { document.getElementById('scrim').hidden = true; drawer(
    ============================================================ */
 function render() {
   renderGreeting();
+  renderNav();
   const v = document.getElementById('view');
   if (activeSection === 'inicio') return renderInicio(v);
   if (activeSection === 'loops') return renderLoops(v);
