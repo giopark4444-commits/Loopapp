@@ -1779,14 +1779,15 @@ function sbHeaders() {
 
 /* -- Registro / Login / Logout -- */
 async function signUp(email, password) {
-  const r = await fetch(`${SB.url}/auth/v1/signup`, {
+  // Crea la cuenta ya confirmada vía edge function (registro instantáneo)
+  const r = await fetch(`${SB.url}/functions/v1/auth-signup`, {
     method: 'POST', headers: { 'Content-Type':'application/json', apikey: SB.anonKey },
     body: JSON.stringify({ email, password })
   });
-  const j = await r.json();
-  if (!r.ok) throw new Error(j.msg || j.error_description || j.message || 'Error al crear cuenta');
-  if (j.access_token) { setSession(j); return j; }
-  throw new Error('confirm_email');
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'Error al crear cuenta');
+  // Confirmada → iniciar sesión directo
+  return await signIn(email, password);
 }
 async function signIn(email, password) {
   const r = await fetch(`${SB.url}/auth/v1/token?grant_type=password`, {
