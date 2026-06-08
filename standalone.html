@@ -570,6 +570,24 @@ body[data-layout="cards"] .row:active { background: var(--panel); }
 .sh-del svg { width: 18px; height: 18px; }
 .sh-del:disabled { opacity: .4; }
 
+/* ===========================================================
+   Modal Hazte Full: tarjetas de plan
+   =========================================================== */
+.plan-cards { display: flex; flex-direction: column; gap: 12px; margin: 6px 0 4px; }
+.plan-card { position: relative; text-align: left; width: 100%;
+  border: 2px solid var(--line); border-radius: 16px; background: var(--bg);
+  padding: 16px 18px; cursor: pointer; transition: border-color .15s, transform .1s; }
+.plan-card:hover { border-color: var(--accent); }
+.plan-card:active { transform: scale(.99); }
+.plan-card.best { border-color: var(--accent); }
+.plan-badge { position: absolute; top: -10px; right: 14px;
+  background: var(--accent); color: #fff; font-size: 11px; font-weight: 700;
+  padding: 3px 10px; border-radius: 999px; }
+.plan-name { font-size: 13px; font-weight: 600; color: var(--dim); text-transform: uppercase; letter-spacing: .04em; }
+.plan-price { font-size: 26px; font-weight: 800; color: var(--text); margin: 2px 0; }
+.plan-price span { font-size: 14px; font-weight: 500; color: var(--dim); }
+.plan-note { font-size: 12.5px; color: var(--dim); }
+
 </style>
 <body>
   <div id="app">
@@ -625,6 +643,7 @@ window.LOOPAPP_PUSH = {
    ============================================================ */
 const STORE_KEY = 'loopapp.loops.v1';
 const AUTH_SESSION_KEY = 'loopapp.session';
+const FULL_PRICES = { month: '$9.900', year: '$79.900', perMonthYear: '$6.658', currency: 'COP', save: '33%' };
 let _session = null;
 let _plan = 'free';
 
@@ -946,7 +965,7 @@ function restoreDone(ts) {
 function canAddLoop() { return _plan === 'full' || loops.length < 10; }
 function upsertLoop(data) {
   const isNew = !data.id;
-  if (isNew && !canAddLoop()) { showUpgradeModal(); return; }
+  if (isNew && !canAddLoop()) { showUpgradeModal('limit'); return; }
   if (data.id) { const i = loops.findIndex(l => l.id === data.id); if (i >= 0) loops[i] = { ...loops[i], ...data }; }
   else { data = { ...data, id: uid(), history: [] }; loops.push(data); }
   save(); render();
@@ -964,7 +983,7 @@ function snoozeLoop(id) {
   save(); render();
 }
 function duplicateLoop(id) {
-  if (!canAddLoop()) { showUpgradeModal(); return; }
+  if (!canAddLoop()) { showUpgradeModal('limit'); return; }
   const loop = loops.find(l => l.id === id); if (!loop) return;
   const copy = { ...loop, id: uid(), title: loop.title + ' (copia)', history: [] };
   loops.push(copy); save(); render();
@@ -1484,7 +1503,7 @@ function renderAjustes(v) {
   const signoutBtn = v.querySelector('#o-signout');
   if (signoutBtn) signoutBtn.onclick = async () => { if (confirm('¿Cerrar sesión?')) { await signOut(); } };
   const upgradeBtn = v.querySelector('#o-upgrade');
-  if (upgradeBtn) upgradeBtn.onclick = () => alert('Próximamente: pago con tarjeta.\nContacta al administrador para activar el plan Full.');
+  if (upgradeBtn) upgradeBtn.onclick = () => showUpgradeModal();
 }
 
 /* ============================================================
@@ -1848,7 +1867,7 @@ async function serverSaveLoop(loop) {
       method: 'POST', headers: { ...sbHeaders(), 'Prefer': 'resolution=merge-duplicates,return=minimal' },
       body: JSON.stringify([{ owner_id: s.user.id, client_id: loop.id, title: loop.title, next_date: loop.nextDate, data: loop }])
     });
-    if (!res.ok) { const body = await res.text(); if (body.includes('free_plan_limit')) showUpgradeModal(); }
+    if (!res.ok) { const body = await res.text(); if (body.includes('free_plan_limit')) showUpgradeModal('limit'); }
   } catch(e) {}
 }
 async function serverDeleteLoop(id) {
@@ -1997,19 +2016,42 @@ async function markDoneShared(cid) {
 }
 
 /* -- Modal upsell Full -- */
-function showUpgradeModal() {
+function showUpgradeModal(reason) {
   const ov = document.getElementById('modal-overlay'), m = document.getElementById('modal');
   m.innerHTML = `
-    <h2>Plan Gratis — Límite alcanzado</h2>
-    <p class="modal-sub">Has llegado a los 10 loops del plan gratis.</p>
-    <div style="text-align:center;padding:8px 0 16px">
-      <p style="font-size:15px;margin:0 0 20px;opacity:.8">Con el plan <strong>Full</strong> tienes loops ilimitados y más funciones.</p>
-      <button class="btn btn-primary" id="btn-go-full" style="width:100%;margin-bottom:8px">Hazte Full →</button>
-      <button class="btn btn-ghost" id="btn-cancel-full" style="width:100%">Ahora no</button>
-    </div>`;
+    <h2>Hazte Full</h2>
+    <p class="modal-sub">${reason === 'limit' ? 'Llegaste a los 10 loops del plan gratis. ' : ''}Loops ilimitados, compartir sin límites y más.</p>
+    <div class="plan-cards">
+      <button class="plan-card best" data-interval="year">
+        <div class="plan-badge">Ahorra ${FULL_PRICES.save}</div>
+        <div class="plan-name">Anual</div>
+        <div class="plan-price">${FULL_PRICES.year}<span>/año</span></div>
+        <div class="plan-note">≈ ${FULL_PRICES.perMonthYear}/mes · ${FULL_PRICES.currency}</div>
+      </button>
+      <button class="plan-card" data-interval="month">
+        <div class="plan-name">Mensual</div>
+        <div class="plan-price">${FULL_PRICES.month}<span>/mes</span></div>
+        <div class="plan-note">${FULL_PRICES.currency} · cancela cuando quieras</div>
+      </button>
+    </div>
+    <div class="modal-actions"><button class="btn btn-ghost" id="btn-cancel-full">Ahora no</button></div>`;
   ov.hidden = false;
-  m.querySelector('#btn-go-full').onclick = () => { ov.hidden = true; activeSection = 'ajustes'; setPref('ui.section','ajustes'); render(); };
+  m.querySelectorAll('.plan-card').forEach(c => c.onclick = () => { ov.hidden = true; startCheckout(c.dataset.interval); });
   m.querySelector('#btn-cancel-full').onclick = () => { ov.hidden = true; };
+  ov.onclick = (e) => { if (e.target === ov) ov.hidden = true; };
+}
+async function startCheckout(interval) {
+  const s = await ensureSession(); if (!s) { showAuthScreen(); return; }
+  try {
+    const r = await fetch(`${SB.url}/functions/v1/create-checkout`, {
+      method: 'POST', headers: sbHeaders(), body: JSON.stringify({ interval })
+    });
+    const j = await r.json().catch(() => ({}));
+    if (r.ok && j.url) { location.href = j.url; return; }
+    alert(j.error || 'Los pagos se activan muy pronto. ¡Gracias por tu interés en Full! 🚀');
+  } catch(e) {
+    alert('Los pagos se activan muy pronto. ¡Gracias por tu interés en Full! 🚀');
+  }
 }
 
 /* ============================================================

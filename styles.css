@@ -555,3 +555,21 @@ body[data-layout="cards"] .row:active { background: var(--panel); }
 .sh-del:hover { color: var(--overdue); background: color-mix(in srgb, var(--overdue) 10%, transparent); }
 .sh-del svg { width: 18px; height: 18px; }
 .sh-del:disabled { opacity: .4; }
+
+/* ===========================================================
+   Modal Hazte Full: tarjetas de plan
+   =========================================================== */
+.plan-cards { display: flex; flex-direction: column; gap: 12px; margin: 6px 0 4px; }
+.plan-card { position: relative; text-align: left; width: 100%;
+  border: 2px solid var(--line); border-radius: 16px; background: var(--bg);
+  padding: 16px 18px; cursor: pointer; transition: border-color .15s, transform .1s; }
+.plan-card:hover { border-color: var(--accent); }
+.plan-card:active { transform: scale(.99); }
+.plan-card.best { border-color: var(--accent); }
+.plan-badge { position: absolute; top: -10px; right: 14px;
+  background: var(--accent); color: #fff; font-size: 11px; font-weight: 700;
+  padding: 3px 10px; border-radius: 999px; }
+.plan-name { font-size: 13px; font-weight: 600; color: var(--dim); text-transform: uppercase; letter-spacing: .04em; }
+.plan-price { font-size: 26px; font-weight: 800; color: var(--text); margin: 2px 0; }
+.plan-price span { font-size: 14px; font-weight: 500; color: var(--dim); }
+.plan-note { font-size: 12.5px; color: var(--dim); }
