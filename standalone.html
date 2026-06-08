@@ -588,6 +588,24 @@ body[data-layout="cards"] .row:active { background: var(--panel); }
 .plan-price span { font-size: 14px; font-weight: 500; color: var(--dim); }
 .plan-note { font-size: 12.5px; color: var(--dim); }
 
+/* ===========================================================
+   Importar por foto: distintivo, spinner y lista de revisión
+   =========================================================== */
+.opt-tag { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px;
+  background: var(--accent); color: #fff; font-size: 10.5px; font-weight: 700; vertical-align: middle; }
+.spinner { width: 38px; height: 38px; margin: 0 auto; border: 3px solid var(--line);
+  border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.imp-list { display: flex; flex-direction: column; gap: 8px; max-height: 46vh; overflow-y: auto; margin: 4px -4px 0; padding: 2px 4px; }
+.imp-row { display: flex; align-items: center; gap: 11px; padding: 10px 12px;
+  border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
+.imp-row input { width: 19px; height: 19px; flex: none; accent-color: var(--accent); }
+.imp-ic { flex: none; width: 22px; height: 22px; color: var(--dim); display: flex; align-items: center; justify-content: center; }
+.imp-ic svg { width: 20px; height: 20px; }
+.imp-body { display: flex; flex-direction: column; min-width: 0; }
+.imp-title { font-size: 14.5px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.imp-meta { font-size: 12px; color: var(--dim); }
+
 </style>
 <body>
   <div id="app">
@@ -617,6 +635,9 @@ body[data-layout="cards"] .row:active { background: var(--panel); }
 
   <!-- Input oculto para importar respaldo -->
   <input id="import-file" type="file" accept="application/json,.json" hidden />
+
+  <!-- Input oculto para importar por foto (cámara o galería) -->
+  <input id="photo-file" type="file" accept="image/*" capture="environment" hidden />
 
   <!-- Pantalla de autenticación (cubre todo hasta que el usuario inicia sesión) -->
   <div id="auth-screen" hidden></div>
@@ -720,6 +741,7 @@ const ICON = {
   share: '<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>',
   forward: '<polyline points="15 17 20 12 15 7"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/>',
   clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  camera: '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
 };
 function svg(name) { const i = ICON[name]; return i == null ? '' :
   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${i}</svg>`; }
@@ -1482,6 +1504,7 @@ function renderAjustes(v) {
       <div class="data-info">${loops.length} loop${loops.length===1?'':'s'} · ${getDone().length} completado${getDone().length===1?'':'s'} · ${getUserCats().length} categoría${getUserCats().length===1?'':'s'} propia${getUserCats().length===1?'':'s'}</div>
       <button class="opt" id="o-export">${svg('download')} Exportar copia (archivo)</button>
       <button class="opt" id="o-copy">${svg('copy')} Copiar respaldo (texto)</button>
+      <button class="opt" id="o-photo">${svg('camera')} Importar por foto ✨ <span class="opt-tag">Full</span></button>
       <button class="opt" id="o-import">${svg('upload')} Importar desde archivo</button>
       <button class="opt" id="o-paste">${svg('file')} Restaurar desde texto pegado</button>
       <button class="opt" id="o-install" hidden>${svg('smartphone')} Instalar como app</button>
@@ -1506,6 +1529,7 @@ function renderAjustes(v) {
   v.querySelector('#o-copy').onclick = copyBackup;
   v.querySelector('#o-paste').onclick = pasteBackup;
   v.querySelector('#o-import').onclick = () => document.getElementById('import-file').click();
+  v.querySelector('#o-photo').onclick = importByPhoto;
   v.querySelector('#o-reset').onclick = () => { if (confirm('¿Restablecer datos de ejemplo? (borra tus Loops actuales)')) { loops = seed(); save(); render(); } };
   const ib = v.querySelector('#o-install'); if (deferredPrompt) ib.hidden = false;
   ib.onclick = async () => { if (!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; ib.hidden = true; };
@@ -1728,6 +1752,121 @@ importFile.onchange = (e) => {
   };
   r.readAsText(file);
 };
+
+/* ---------- Importar por foto (IA — solo Full) ---------- */
+const photoFile = document.getElementById('photo-file');
+function importByPhoto() {
+  if (!getSession()) { showAuthScreen(); return; }
+  if (_plan !== 'full') { showUpgradeModal('photo'); return; }
+  if (photoFile) photoFile.click();
+}
+function closeModal() { document.getElementById('modal-overlay').hidden = true; }
+function downscaleImage(file, maxPx, quality) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.naturalWidth, h = img.naturalHeight;
+      const scale = Math.min(1, maxPx / Math.max(w, h));
+      w = Math.max(1, Math.round(w * scale)); h = Math.max(1, Math.round(h * scale));
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(img.src);
+      resolve(c.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(img.src); reject(new Error('img')); };
+    img.src = URL.createObjectURL(file);
+  });
+}
+function showPhotoLoading() {
+  const ov = document.getElementById('modal-overlay'), m = document.getElementById('modal');
+  m.innerHTML = `<div style="text-align:center;padding:20px 8px">
+    <div class="spinner"></div>
+    <h2 style="margin-top:18px">Leyendo tu foto…</h2>
+    <p class="modal-sub">La IA está identificando tus loops. Tarda unos segundos.</p></div>`;
+  ov.hidden = false;
+}
+if (photoFile) photoFile.onchange = async (e) => {
+  const file = e.target.files[0]; photoFile.value = ''; if (!file) return;
+  let dataUrl;
+  try { dataUrl = await downscaleImage(file, 1500, 0.8); }
+  catch (err) { alert('No pude leer esa imagen. Prueba con otra foto.'); return; }
+  showPhotoLoading();
+  try {
+    const r = await fetch(`${SB.url}/functions/v1/import-photo`, { method: 'POST', headers: sbHeaders(), body: JSON.stringify({ image: dataUrl }) });
+    const j = await r.json().catch(() => ({}));
+    if (r.status === 403 || j.error === 'full_only') { closeModal(); showUpgradeModal('photo'); return; }
+    if (r.status === 401) { closeModal(); showAuthScreen(); return; }
+    if (r.status === 503 || j.error === 'no_key') { closeModal(); alert('La lectura por foto se está activando. Vuelve a intentarlo muy pronto. 🚀'); return; }
+    if (!r.ok || !Array.isArray(j.loops)) { closeModal(); alert(j.error || 'No pude leer la foto. Prueba con una más clara y de frente.'); return; }
+    if (!j.loops.length) { closeModal(); alert('No encontré loops en la foto. Funciona mejor con una lista, factura o recibo claros.'); return; }
+    showPhotoReview(j.loops);
+  } catch (err) { closeModal(); alert('Hubo un problema de conexión. Inténtalo de nuevo.'); }
+};
+function normalizeImported(it) {
+  const l = normalizeLoop({
+    title: it.title,
+    amount: it.amount,
+    currency: CURRENCIES[it.currency] ? it.currency : pref('currency', 'USD'),
+    category: it.category,
+    icon: ICON[it.icon] ? it.icon : (CATEGORIES[it.category] ? CATEGORIES[it.category].icon : 'repeat'),
+    recurrence: it.recurrence,
+    nextDate: it.nextDate || offsetDate(7),
+    notes: it.notes,
+    notifyDaysBefore: parseInt(pref('defaultNotify', '3'), 10) || 3,
+    autoPay: false,
+  });
+  l._sel = true;
+  return l;
+}
+let _photoLoops = [];
+function impMeta(l) {
+  const parts = [];
+  if (l.amount != null) parts.push(money(l.amount, l.currency));
+  parts.push(RECURRENCE[l.recurrence] ? RECURRENCE[l.recurrence].label : 'Sin repetir');
+  parts.push(catOf(l).label);
+  return parts.join(' · ');
+}
+function showPhotoReview(items) {
+  _photoLoops = items.map(normalizeImported);
+  renderPhotoReview();
+}
+function renderPhotoReview() {
+  const ov = document.getElementById('modal-overlay'), m = document.getElementById('modal');
+  const rows = _photoLoops.map((l, i) => `
+    <label class="imp-row">
+      <input type="checkbox" data-i="${i}" ${l._sel ? 'checked' : ''}>
+      <span class="imp-ic">${svg(l.icon)}</span>
+      <span class="imp-body">
+        <span class="imp-title">${escapeHtml(l.title)}</span>
+        <span class="imp-meta">${escapeHtml(impMeta(l))}</span>
+      </span>
+    </label>`).join('');
+  const n = _photoLoops.filter(l => l._sel).length;
+  m.innerHTML = `
+    <h2>Encontré ${_photoLoops.length} loop${_photoLoops.length === 1 ? '' : 's'}</h2>
+    <p class="modal-sub">Revisa y desmarca los que no quieras. Podrás editar cada uno después.</p>
+    <div class="imp-list">${rows}</div>
+    <div class="modal-actions" style="margin-top:14px">
+      <button class="btn btn-ghost" id="imp-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="imp-add"${n ? '' : ' disabled'}>Añadir ${n} loop${n === 1 ? '' : 's'}</button>
+    </div>`;
+  ov.hidden = false;
+  m.querySelectorAll('.imp-row input').forEach(c => c.onchange = () => { _photoLoops[+c.dataset.i]._sel = c.checked; renderPhotoReview(); });
+  m.querySelector('#imp-cancel').onclick = closeModal;
+  m.querySelector('#imp-add').onclick = () => {
+    const sel = _photoLoops.filter(l => l._sel);
+    if (!sel.length) { closeModal(); return; }
+    sel.forEach(l => {
+      const { _sel, ...rest } = l;
+      const data = { ...rest, id: uid(), history: [] };
+      loops.push(data);
+      if (getSession()) serverSaveLoop(data);
+    });
+    save(); render(); closeModal();
+    alert(`${sel.length} loop${sel.length === 1 ? '' : 's'} añadido${sel.length === 1 ? '' : 's'} ✓`);
+  };
+}
+
 function exportData() {
   const blob = new Blob([JSON.stringify(buildBackup(), null, 2)], { type: 'application/json' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
@@ -2038,7 +2177,7 @@ function showUpgradeModal(reason) {
   const ov = document.getElementById('modal-overlay'), m = document.getElementById('modal');
   m.innerHTML = `
     <h2>Hazte Full</h2>
-    <p class="modal-sub">${reason === 'limit' ? 'Llegaste a los 10 loops del plan gratis. ' : ''}Loops ilimitados, compartir sin límites y más.</p>
+    <p class="modal-sub">${reason === 'limit' ? 'Llegaste a los 10 loops del plan gratis. ' : reason === 'photo' ? 'Importar por foto es una función Full. ' : ''}Loops ilimitados, importar por foto, compartir sin límites y más.</p>
     <div class="plan-cards">
       ${PLAN_ORDER.filter(k => PRICES[k]).map(k => { const p = PRICES[k]; return `
       <button class="plan-card${p.best ? ' best' : ''}" data-interval="${k}">

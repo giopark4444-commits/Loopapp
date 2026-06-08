@@ -573,3 +573,21 @@ body[data-layout="cards"] .row:active { background: var(--panel); }
 .plan-price { font-size: 26px; font-weight: 800; color: var(--text); margin: 2px 0; }
 .plan-price span { font-size: 14px; font-weight: 500; color: var(--dim); }
 .plan-note { font-size: 12.5px; color: var(--dim); }
+
+/* ===========================================================
+   Importar por foto: distintivo, spinner y lista de revisión
+   =========================================================== */
+.opt-tag { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px;
+  background: var(--accent); color: #fff; font-size: 10.5px; font-weight: 700; vertical-align: middle; }
+.spinner { width: 38px; height: 38px; margin: 0 auto; border: 3px solid var(--line);
+  border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.imp-list { display: flex; flex-direction: column; gap: 8px; max-height: 46vh; overflow-y: auto; margin: 4px -4px 0; padding: 2px 4px; }
+.imp-row { display: flex; align-items: center; gap: 11px; padding: 10px 12px;
+  border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
+.imp-row input { width: 19px; height: 19px; flex: none; accent-color: var(--accent); }
+.imp-ic { flex: none; width: 22px; height: 22px; color: var(--dim); display: flex; align-items: center; justify-content: center; }
+.imp-ic svg { width: 20px; height: 20px; }
+.imp-body { display: flex; flex-direction: column; min-width: 0; }
+.imp-title { font-size: 14.5px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.imp-meta { font-size: 12px; color: var(--dim); }
