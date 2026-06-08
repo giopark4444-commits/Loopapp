@@ -439,12 +439,14 @@ function renderInicio(v) {
       <span><b>${money0(monthly, def)}</b> / mes</span>
       <span><b>${manuales}</b> manuales</span>
     </div>
-    <div class="catbar">
-      <button class="catsel" id="catsel" aria-haspopup="true">${svg(curCat.icon)}<span>${curCat.label}</span>${svg('chevron-down')}</button>
-      <div class="catmenu" id="catmenu" hidden>${catMenu}</div>
+    <div class="filters">
+      <div class="catbar">
+        <button class="catsel" id="catsel" aria-haspopup="true">${svg(curCat.icon)}<span>${curCat.label}</span>${svg('chevron-down')}</button>
+        <div class="catmenu" id="catmenu" hidden>${catMenu}</div>
+      </div>
+      <div class="seg">${seg('all','Todos')}${seg('manual','Manuales')}${seg('auto','Automáticos')}${seg('free','Gratis')}</div>
+      <input id="search" class="search-input" type="search" placeholder="Buscar Loop…" autocomplete="off" value="${escapeAttr(searchQuery)}" />
     </div>
-    <div class="seg">${seg('all','Todos')}${seg('manual','Manuales')}${seg('auto','Automáticos')}${seg('free','Gratis')}</div>
-    <input id="search" class="search-input" type="search" placeholder="Buscar Loop…" autocomplete="off" value="${escapeAttr(searchQuery)}" />
     <div class="list" id="list"></div>`;
 
   const catsel = v.querySelector('#catsel'), catmenu = v.querySelector('#catmenu');

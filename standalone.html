@@ -478,6 +478,18 @@ body[data-layout="cards"] .row:active { background: var(--panel); }
 /* Datos y respaldo: línea de resumen */
 .data-info { font-size: 12.5px; color: var(--dim); padding: 2px 2px 10px; }
 
+/* ===========================================================
+   Filtros: categoría + búsqueda en la misma línea (tablet/desktop)
+   En teléfono se apilan como antes.
+   =========================================================== */
+.filters { display: flex; flex-direction: column; }
+@media (min-width: 760px) {
+  .filters { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 16px 4px; max-width: 760px; }
+  .filters .catbar { order: 1; flex: 1 1 240px; margin: 0; }
+  .filters .search-input { order: 2; flex: 1 1 240px; width: auto; margin: 0; }
+  .filters .seg { order: 3; flex: 0 0 100%; margin: 6px 0 2px; max-width: none; }
+}
+
 </style>
 </head>
 <body>
@@ -966,12 +978,14 @@ function renderInicio(v) {
       <span><b>${money0(monthly, def)}</b> / mes</span>
       <span><b>${manuales}</b> manuales</span>
     </div>
-    <div class="catbar">
-      <button class="catsel" id="catsel" aria-haspopup="true">${svg(curCat.icon)}<span>${curCat.label}</span>${svg('chevron-down')}</button>
-      <div class="catmenu" id="catmenu" hidden>${catMenu}</div>
+    <div class="filters">
+      <div class="catbar">
+        <button class="catsel" id="catsel" aria-haspopup="true">${svg(curCat.icon)}<span>${curCat.label}</span>${svg('chevron-down')}</button>
+        <div class="catmenu" id="catmenu" hidden>${catMenu}</div>
+      </div>
+      <div class="seg">${seg('all','Todos')}${seg('manual','Manuales')}${seg('auto','Automáticos')}${seg('free','Gratis')}</div>
+      <input id="search" class="search-input" type="search" placeholder="Buscar Loop…" autocomplete="off" value="${escapeAttr(searchQuery)}" />
     </div>
-    <div class="seg">${seg('all','Todos')}${seg('manual','Manuales')}${seg('auto','Automáticos')}${seg('free','Gratis')}</div>
-    <input id="search" class="search-input" type="search" placeholder="Buscar Loop…" autocomplete="off" value="${escapeAttr(searchQuery)}" />
     <div class="list" id="list"></div>`;
 
   const catsel = v.querySelector('#catsel'), catmenu = v.querySelector('#catmenu');
