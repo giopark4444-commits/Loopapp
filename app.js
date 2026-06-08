@@ -368,6 +368,7 @@ const SECTIONS = [
   { key: 'calendario',icon: 'calendar', label: 'Calendario' },
   { key: 'finanzas',  icon: 'wallet',   label: 'Finanzas' },
   { key: 'stats',     icon: 'bars',     label: 'Estadísticas' },
+  { key: 'compartidos',icon: 'forward', label: 'Compartidos conmigo' },
   { key: 'historial', icon: 'checksq',  label: 'Completados' },
 ];
 function renderNav() {
@@ -395,6 +396,7 @@ function render() {
   if (activeSection === 'calendario') return renderCalendario(v);
   if (activeSection === 'finanzas') return renderFinanzas(v);
   if (activeSection === 'stats') return renderStats(v);
+  if (activeSection === 'compartidos') return renderCompartidos(v);
   if (activeSection === 'historial') return renderHistorial(v);
   if (activeSection === 'ajustes') return renderAjustes(v);
 }
@@ -914,6 +916,7 @@ function openForm(loop, opts) {
       <button type="button" class="fa-btn" id="f-skip">${svg('forward')} Saltar fecha</button>
       <button type="button" class="fa-btn" id="f-dup">${svg('copy')} Duplicar</button>
       <button type="button" class="fa-btn" id="f-share">${svg('share')} Compartir</button>
+      <button type="button" class="fa-btn" id="f-collab">${svg('forward')} Dar acceso</button>
       <button type="button" class="fa-btn" id="f-ics">${svg('calendar')} Calendario</button>
     </div>` : ''}
     <div class="modal-actions">
@@ -941,6 +944,7 @@ function openForm(loop, opts) {
     modal.querySelector('#f-skip').onclick = () => { snoozeLoop(data.id); close(); };
     modal.querySelector('#f-dup').onclick = () => { duplicateLoop(data.id); close(); };
     modal.querySelector('#f-share').onclick = () => shareLoop(data);
+    modal.querySelector('#f-collab').onclick = () => { if (!getSession()) { alert('Inicia sesión para compartir.'); return; } openShareModal(data.id); };
   }
   modal.querySelector('#f-cancel').onclick = close;
   overlay.onclick = (e) => { if (e.target === overlay) close(); };
@@ -1232,6 +1236,123 @@ async function serverDeleteLoop(id) {
       method: 'DELETE', headers: sbHeaders()
     });
   } catch(e) {}
+}
+
+/* -- Compartir loops -- */
+let sharedLoops = [];
+async function serverLoopUuid(clientId) {
+  const s = await ensureSession(); if (!s || !SB.url) return null;
+  try {
+    const r = await fetch(`${SB.url}/rest/v1/loops?owner_id=eq.${s.user.id}&client_id=eq.${encodeURIComponent(clientId)}&select=id`, { headers: sbHeaders() });
+    if (!r.ok) return null;
+    const rows = await r.json(); return rows[0]?.id || null;
+  } catch(e) { return null; }
+}
+async function listShares(clientId) {
+  const uuid = await serverLoopUuid(clientId); if (!uuid) return [];
+  try {
+    const r = await fetch(`${SB.url}/rest/v1/loop_shares?loop_id=eq.${uuid}&select=id,invited_email,grantee_id,permission`, { headers: sbHeaders() });
+    return r.ok ? await r.json() : [];
+  } catch(e) { return []; }
+}
+async function addShare(clientId, email, perm) {
+  const s = await ensureSession(); if (!s) return { error: 'Inicia sesión.' };
+  let uuid = await serverLoopUuid(clientId);
+  if (!uuid) { await serverSaveLoop(loops.find(l => l.id === clientId)); uuid = await serverLoopUuid(clientId); }
+  if (!uuid) return { error: 'El loop aún se está sincronizando. Intenta de nuevo en unos segundos.' };
+  try {
+    const r = await fetch(`${SB.url}/rest/v1/loop_shares`, {
+      method: 'POST', headers: { ...sbHeaders(), Prefer: 'return=minimal' },
+      body: JSON.stringify([{ loop_id: uuid, invited_email: email.toLowerCase(), permission: perm, created_by: s.user.id }])
+    });
+    if (!r.ok) { const t = await r.text(); if (t.includes('duplicate') || t.includes('unique')) return { error: 'Ya compartiste este loop con ese correo.' }; return { error: 'No se pudo compartir.' }; }
+    return { ok: true };
+  } catch(e) { return { error: 'Error de conexión.' }; }
+}
+async function removeShare(shareId) {
+  try { await fetch(`${SB.url}/rest/v1/loop_shares?id=eq.${shareId}`, { method: 'DELETE', headers: sbHeaders() }); } catch(e) {}
+}
+async function fetchShared() {
+  const s = await ensureSession(); if (!s || !SB.url) { sharedLoops = []; return; }
+  try {
+    const r = await fetch(`${SB.url}/rest/v1/loop_shares?grantee_id=eq.${s.user.id}&select=permission,loops(client_id,data,owner_id)`, { headers: sbHeaders() });
+    if (!r.ok) { sharedLoops = []; return; }
+    const rows = await r.json();
+    sharedLoops = rows.filter(x => x.loops && x.loops.data).map(x => ({ ...x.loops.data, id: x.loops.client_id, _shared: true, _perm: x.permission, _owner: x.loops.owner_id }));
+  } catch(e) { sharedLoops = []; }
+}
+
+/* -- Modal de colaboradores (compartir un loop) -- */
+function openShareModal(clientId) {
+  const ov = document.getElementById('modal-overlay'), m = document.getElementById('modal');
+  m.innerHTML = `
+    <h2>Dar acceso</h2>
+    <p class="modal-sub">Comparte este loop por correo. La persona solo verá <strong>este</strong> loop — nada más de lo tuyo.</p>
+    <div class="field"><label>Correo</label><input id="sh-email" type="email" placeholder="persona@correo.com" autocomplete="off" /></div>
+    <div class="field"><label>Permiso</label><select id="sh-perm">
+      <option value="view">Solo ver</option>
+      <option value="edit">Ver y editar</option>
+    </select></div>
+    <div id="sh-err" class="auth-err" hidden></div>
+    <button class="btn btn-primary" id="sh-add" style="width:100%;margin-bottom:14px">Compartir</button>
+    <div id="sh-list"><p class="sub" style="text-align:center">Cargando…</p></div>
+    <div class="modal-actions"><button class="btn btn-ghost" id="sh-close">Cerrar</button></div>`;
+  ov.hidden = false;
+  const errEl = m.querySelector('#sh-err');
+  async function refresh() {
+    const shares = await listShares(clientId);
+    const el = m.querySelector('#sh-list');
+    if (!el) return;
+    if (!shares.length) { el.innerHTML = `<p class="sub" style="text-align:center">Aún no lo has compartido con nadie.</p>`; return; }
+    el.innerHTML = `<div class="sh-rows">${shares.map(s => `
+      <div class="sh-row">
+        <div class="sh-info"><div class="sh-mail">${escapeHtml(s.invited_email || '—')}</div>
+          <div class="sh-meta">${s.permission === 'edit' ? 'Ver y editar' : 'Solo ver'} · ${s.grantee_id ? 'activo' : 'invitación pendiente'}</div></div>
+        <button class="sh-del" data-sid="${s.id}" aria-label="Quitar">${svg('trash')}</button>
+      </div>`).join('')}</div>`;
+    el.querySelectorAll('.sh-del').forEach(b => b.onclick = async () => { b.disabled = true; await removeShare(b.dataset.sid); refresh(); });
+  }
+  refresh();
+  m.querySelector('#sh-add').onclick = async () => {
+    const email = m.querySelector('#sh-email').value.trim();
+    const perm = m.querySelector('#sh-perm').value;
+    const btn = m.querySelector('#sh-add');
+    errEl.hidden = true;
+    if (!email || !email.includes('@')) { errEl.textContent = 'Escribe un correo válido.'; errEl.hidden = false; return; }
+    btn.disabled = true; btn.textContent = '…';
+    const res = await addShare(clientId, email, perm);
+    btn.disabled = false; btn.textContent = 'Compartir';
+    if (res.error) { errEl.textContent = res.error; errEl.hidden = false; return; }
+    m.querySelector('#sh-email').value = '';
+    refresh();
+  };
+  m.querySelector('#sh-close').onclick = () => { ov.hidden = true; };
+  ov.onclick = (e) => { if (e.target === ov) ov.hidden = true; };
+}
+
+/* -- Vista "Compartidos conmigo" -- */
+async function renderCompartidos(v) {
+  v.innerHTML = `<div class="sec-title">Compartidos conmigo</div><div class="list" id="shared-list"><p class="sub" style="text-align:center;padding:20px">Cargando…</p></div>`;
+  await fetchShared();
+  const el = document.getElementById('shared-list'); if (!el) return;
+  if (!sharedLoops.length) {
+    el.innerHTML = `<div class="empty"><div class="em">${svg('forward')}</div><h3>Nada compartido aún</h3><p>Cuando alguien comparta un loop contigo, aparecerá aquí.</p></div>`;
+    return;
+  }
+  el.innerHTML = sharedLoops.map(l => {
+    const st = STATES[statusOf(l)], cd = cdParts(l), cat = catOf(l);
+    const badge = l._perm === 'edit' ? '<span class="tag auto">Puedes editar</span>' : '<span class="tag task">Solo ver</span>';
+    return `<div class="row" style="--st:${st.color}">
+      <div class="row-top">
+        <span class="ic">${renderIcon(l.icon || cat.icon)}</span>
+        <div class="mid"><div class="t">${escapeHtml(l.title)}</div>
+          <div class="m">${badge} ${recurLabel(l)}${l.amount ? ' · ' + amtLabel(l) : ''}</div>
+          ${l.notes ? `<div class="note">${escapeHtml(l.notes)}</div>` : ''}</div>
+        <div class="right"><div class="cd">${cd.big}</div><div class="cl">${cd.cl}</div></div>
+      </div>
+      <div class="rowbar"><i style="width:${cd.pct}%"></i></div>
+    </div>`;
+  }).join('');
 }
 
 /* -- Modal upsell Full -- */
