@@ -3,6 +3,9 @@
    PWA sin dependencias. Estado en localStorage.
    ============================================================ */
 const STORE_KEY = 'loopapp.loops.v1';
+const AUTH_SESSION_KEY = 'loopapp.session';
+let _session = null;
+let _plan = 'free';
 
 /* ---------- Iconos SVG monocromáticos ---------- */
 const ICON = {
@@ -319,12 +322,19 @@ function restoreDone(ts) {
   log.splice(i, 1); setDone(log);
   save(); render();
 }
+function canAddLoop() { return _plan === 'full' || loops.length < 10; }
 function upsertLoop(data) {
+  const isNew = !data.id;
+  if (isNew && !canAddLoop()) { showUpgradeModal(); return; }
   if (data.id) { const i = loops.findIndex(l => l.id === data.id); if (i >= 0) loops[i] = { ...loops[i], ...data }; }
-  else loops.push({ ...data, id: uid(), history: [] });
+  else { data = { ...data, id: uid(), history: [] }; loops.push(data); }
   save(); render();
+  if (getSession()) serverSaveLoop(loops.find(l => l.id === data.id) || data);
 }
-function deleteLoop(id) { loops = loops.filter(l => l.id !== id); save(); render(); }
+function deleteLoop(id) {
+  loops = loops.filter(l => l.id !== id); save(); render();
+  if (getSession()) serverDeleteLoop(id);
+}
 function snoozeLoop(id) {
   const loop = loops.find(l => l.id === id); if (!loop) return;
   const next = nextCycle(loop);
@@ -333,9 +343,11 @@ function snoozeLoop(id) {
   save(); render();
 }
 function duplicateLoop(id) {
+  if (!canAddLoop()) { showUpgradeModal(); return; }
   const loop = loops.find(l => l.id === id); if (!loop) return;
-  loops.push({ ...loop, id: uid(), title: loop.title + ' (copia)', history: [] });
-  save(); render();
+  const copy = { ...loop, id: uid(), title: loop.title + ' (copia)', history: [] };
+  loops.push(copy); save(); render();
+  if (getSession()) serverSaveLoop(copy);
 }
 function shareLoop(loop) {
   const parts = [loop.title];
@@ -814,7 +826,8 @@ function renderAjustes(v) {
       <button class="opt" id="o-paste">${svg('file')} Restaurar desde texto pegado</button>
       <button class="opt" id="o-install" hidden>${svg('smartphone')} Instalar como app</button>
       <button class="opt danger" id="o-reset">${svg('rotate')} Restablecer datos de ejemplo</button></div>
-    <p class="sub" style="text-align:center;margin:18px 16px 0;font-size:12px">Loopapp · tus datos se guardan en este dispositivo</p>`;
+    <div class="brk" id="brk-cuenta"><h4>Cuenta</h4></div>
+    <p class="sub" style="text-align:center;margin:18px 16px 0;font-size:12px">Loopapp · tus datos se guardan en tu cuenta</p>`;
   v.querySelectorAll('.swatch').forEach(s => s.onclick = () => { applyTheme(s.dataset.theme); render(); });
   v.querySelectorAll('.lay').forEach(b => b.onclick = () => { applyLayout(b.dataset.lay); render(); });
   v.querySelector('#p-cur').onchange = (e) => { setPref('currency', e.target.value); render(); };
@@ -836,6 +849,19 @@ function renderAjustes(v) {
   v.querySelector('#o-reset').onclick = () => { if (confirm('¿Restablecer datos de ejemplo? (borra tus Loops actuales)')) { loops = seed(); save(); render(); } };
   const ib = v.querySelector('#o-install'); if (deferredPrompt) ib.hidden = false;
   ib.onclick = async () => { if (!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; ib.hidden = true; };
+  // Sección cuenta (dinámica)
+  const brkCuenta = v.querySelector('#brk-cuenta');
+  const s = getSession();
+  const planLabel = _plan === 'full' ? 'Full ✓ — loops ilimitados' : `Gratis — ${loops.length}/10 loops`;
+  let cuentaHtml = `<div class="data-info">${escapeHtml(s?.user?.email || '')}</div>
+    <div class="data-info" style="font-weight:600">Plan: ${planLabel}</div>`;
+  if (_plan === 'free') cuentaHtml += `<button class="opt" id="o-upgrade" style="margin-top:8px">Hazte Full → loops ilimitados</button>`;
+  cuentaHtml += `<button class="opt danger" id="o-signout" style="margin-top:8px">Cerrar sesión</button>`;
+  brkCuenta.insertAdjacentHTML('beforeend', cuentaHtml);
+  const signoutBtn = v.querySelector('#o-signout');
+  if (signoutBtn) signoutBtn.onclick = async () => { if (confirm('¿Cerrar sesión?')) { await signOut(); } };
+  const upgradeBtn = v.querySelector('#o-upgrade');
+  if (upgradeBtn) upgradeBtn.onclick = () => alert('Próximamente: pago con tarjeta.\nContacta al administrador para activar el plan Full.');
 }
 
 /* ============================================================
@@ -1093,18 +1119,151 @@ function downloadICS(list, name) {
 }
 
 /* ============================================================
+   Auth + Sync (Supabase)
+   ============================================================ */
+const SB = window.LOOPAPP_SUPABASE || {};
+
+/* -- Sesión -- */
+function getSession() {
+  if (_session) return _session;
+  try { _session = JSON.parse(localStorage.getItem(AUTH_SESSION_KEY)); } catch(e) {}
+  return _session;
+}
+function setSession(s) { _session = s; localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(s)); }
+function clearSession() { _session = null; _plan = 'free'; localStorage.removeItem(AUTH_SESSION_KEY); }
+
+async function ensureSession() {
+  const s = getSession(); if (!s) return null;
+  if (s.expires_at && Date.now() / 1000 > s.expires_at - 300) {
+    try {
+      const r = await fetch(`${SB.url}/auth/v1/token?grant_type=refresh_token`, {
+        method: 'POST', headers: { 'Content-Type':'application/json', apikey: SB.anonKey },
+        body: JSON.stringify({ refresh_token: s.refresh_token })
+      });
+      if (r.ok) { const ns = await r.json(); setSession({ ...ns, user: ns.user || s.user }); return getSession(); }
+    } catch(e) {}
+    clearSession(); return null;
+  }
+  return s;
+}
+
+function sbHeaders() {
+  const tok = getSession()?.access_token;
+  return { 'Content-Type':'application/json', apikey: SB.anonKey, Authorization: `Bearer ${tok || SB.anonKey}` };
+}
+
+/* -- Registro / Login / Logout -- */
+async function signUp(email, password) {
+  const r = await fetch(`${SB.url}/auth/v1/signup`, {
+    method: 'POST', headers: { 'Content-Type':'application/json', apikey: SB.anonKey },
+    body: JSON.stringify({ email, password })
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.msg || j.error_description || j.message || 'Error al crear cuenta');
+  if (j.access_token) { setSession(j); return j; }
+  throw new Error('confirm_email');
+}
+async function signIn(email, password) {
+  const r = await fetch(`${SB.url}/auth/v1/token?grant_type=password`, {
+    method: 'POST', headers: { 'Content-Type':'application/json', apikey: SB.anonKey },
+    body: JSON.stringify({ email, password })
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.msg || j.error_description || j.message || 'Correo o contraseña incorrectos');
+  setSession(j); return j;
+}
+async function signOut() {
+  const tok = getSession()?.access_token;
+  clearSession();
+  if (tok && SB.url) {
+    try { await fetch(`${SB.url}/auth/v1/logout`, {
+      method: 'POST', headers: { 'Content-Type':'application/json', apikey: SB.anonKey, Authorization: `Bearer ${tok}` }
+    }); } catch(e) {}
+  }
+  showAuthScreen();
+}
+
+/* -- Plan -- */
+async function loadPlan() {
+  const s = getSession(); if (!s || !SB.url) return;
+  try {
+    const r = await fetch(`${SB.url}/rest/v1/profiles?id=eq.${s.user.id}&select=plan`, { headers: sbHeaders() });
+    if (r.ok) { const rows = await r.json(); _plan = rows[0]?.plan || 'free'; }
+  } catch(e) {}
+}
+
+/* -- Sync servidor -- */
+async function syncDown() {
+  const s = await ensureSession(); if (!s || !SB.url) return;
+  try {
+    const r = await fetch(`${SB.url}/rest/v1/loops?owner_id=eq.${s.user.id}&select=client_id,data`, { headers: sbHeaders() });
+    if (!r.ok) return;
+    const rows = await r.json();
+    if (rows.length === 0) { if (loops.length > 0) await syncUp(); return; }
+    loops = rows.map(row => ({ ...row.data, id: row.client_id }));
+    localStorage.setItem(STORE_KEY, JSON.stringify(loops));
+    render();
+  } catch(e) {}
+}
+async function syncUp() {
+  const s = await ensureSession(); if (!s || !SB.url || loops.length === 0) return;
+  try {
+    const payload = loops.map(l => ({ owner_id: s.user.id, client_id: l.id, title: l.title, next_date: l.nextDate, data: l }));
+    await fetch(`${SB.url}/rest/v1/loops`, {
+      method: 'POST', headers: { ...sbHeaders(), 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(payload)
+    });
+  } catch(e) {}
+}
+async function serverSaveLoop(loop) {
+  const s = await ensureSession(); if (!s || !SB.url) return;
+  try {
+    const res = await fetch(`${SB.url}/rest/v1/loops`, {
+      method: 'POST', headers: { ...sbHeaders(), 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify([{ owner_id: s.user.id, client_id: loop.id, title: loop.title, next_date: loop.nextDate, data: loop }])
+    });
+    if (!res.ok) { const body = await res.text(); if (body.includes('free_plan_limit')) showUpgradeModal(); }
+  } catch(e) {}
+}
+async function serverDeleteLoop(id) {
+  const s = await ensureSession(); if (!s || !SB.url) return;
+  try {
+    await fetch(`${SB.url}/rest/v1/loops?client_id=eq.${id}&owner_id=eq.${s.user.id}`, {
+      method: 'DELETE', headers: sbHeaders()
+    });
+  } catch(e) {}
+}
+
+/* -- Modal upsell Full -- */
+function showUpgradeModal() {
+  const ov = document.getElementById('modal-overlay'), m = document.getElementById('modal');
+  m.innerHTML = `
+    <h2>Plan Gratis — Límite alcanzado</h2>
+    <p class="modal-sub">Has llegado a los 10 loops del plan gratis.</p>
+    <div style="text-align:center;padding:8px 0 16px">
+      <p style="font-size:15px;margin:0 0 20px;opacity:.8">Con el plan <strong>Full</strong> tienes loops ilimitados y más funciones.</p>
+      <button class="btn btn-primary" id="btn-go-full" style="width:100%;margin-bottom:8px">Hazte Full →</button>
+      <button class="btn btn-ghost" id="btn-cancel-full" style="width:100%">Ahora no</button>
+    </div>`;
+  ov.hidden = false;
+  m.querySelector('#btn-go-full').onclick = () => { ov.hidden = true; activeSection = 'ajustes'; setPref('ui.section','ajustes'); render(); };
+  m.querySelector('#btn-cancel-full').onclick = () => { ov.hidden = true; };
+}
+
+/* ============================================================
    Avisos: push real (app cerrada) + notificación local
    ============================================================ */
 const NOTIFY_SENT_KEY = 'loopapp.notify.sent.v1', PUSH_ENABLED_KEY = 'loopapp.push.enabled', DEVICE_KEY = 'loopapp.device.id';
-const SB = window.LOOPAPP_SUPABASE || {};
 const VAPID_PUBLIC = (window.LOOPAPP_PUSH && window.LOOPAPP_PUSH.vapidPublic) || '';
 function notifyEnabled() { return 'Notification' in window && Notification.permission === 'granted'; }
 function pushEnabled() { return localStorage.getItem(PUSH_ENABLED_KEY) === '1'; }
 function deviceId() { let id = localStorage.getItem(DEVICE_KEY); if (!id) { id = 'dev_' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2); localStorage.setItem(DEVICE_KEY, id); } return id; }
 function urlB64(s) { const pad = '='.repeat((4 - s.length % 4) % 4); const b = (s+pad).replace(/-/g,'+').replace(/_/g,'/'); const raw = atob(b); const a = new Uint8Array(raw.length); for (let i=0;i<raw.length;i++) a[i]=raw.charCodeAt(i); return a; }
-function sbHeaders() { return { 'Content-Type':'application/json', apikey: SB.anonKey, Authorization: `Bearer ${SB.anonKey}` }; }
 let syncTimer;
-function scheduleSync() { if (!pushEnabled() && !calEnabled()) return; clearTimeout(syncTimer); syncTimer = setTimeout(() => { syncReminders(); syncCal(); }, 1500); }
+function scheduleSync() {
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => { syncReminders(); syncCal(); if (getSession()) syncUp(); }, 1500);
+}
 async function syncReminders() {
   if (!pushEnabled() || !SB.url) return;
   const reminders = loops.map(l => ({ loop_id: l.id, title: l.title, next_date: l.nextDate, notify_days: l.notifyDaysBefore ?? 3 }));
@@ -1172,12 +1331,75 @@ window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); defe
 /* Service worker */
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
+/* ---------- Pantalla de auth ---------- */
+function showAuthScreen(tab) {
+  const scr = document.getElementById('auth-screen');
+  if (!scr) return;
+  scr.hidden = false;
+  renderAuthScreen(tab || 'signin');
+}
+function hideAuthScreen() {
+  const scr = document.getElementById('auth-screen'); if (scr) scr.hidden = true;
+}
+function renderAuthScreen(tab) {
+  const scr = document.getElementById('auth-screen'); if (!scr) return;
+  scr.innerHTML = `
+    <div class="auth-box">
+      <div class="auth-logo">${svg('repeat')}<span>Loopapp</span></div>
+      <div class="auth-tabs">
+        <button id="tab-signin" class="${tab==='signin'?'act':''}">Entrar</button>
+        <button id="tab-signup" class="${tab==='signup'?'act':''}">Crear cuenta</button>
+      </div>
+      <div id="auth-form">
+        <input type="email" id="auth-email" placeholder="tu@correo.com" autocomplete="email" inputmode="email" />
+        <input type="password" id="auth-pwd" placeholder="${tab==='signup'?'Contraseña (mín. 6 caracteres)':'Contraseña'}" autocomplete="${tab==='signup'?'new-password':'current-password'}" />
+        <div id="auth-err" class="auth-err" hidden></div>
+        <button id="auth-submit" class="auth-btn">${tab==='signin'?'Entrar':'Crear cuenta'}</button>
+      </div>
+    </div>`;
+  const errEl = scr.querySelector('#auth-err');
+  function showErr(msg) { errEl.textContent = msg; errEl.hidden = false; }
+  scr.querySelector('#tab-signin').onclick = () => renderAuthScreen('signin');
+  scr.querySelector('#tab-signup').onclick = () => renderAuthScreen('signup');
+  scr.querySelector('#auth-submit').onclick = async () => {
+    const email = scr.querySelector('#auth-email').value.trim();
+    const pwd = scr.querySelector('#auth-pwd').value;
+    const btn = scr.querySelector('#auth-submit');
+    if (!email || !pwd) { showErr('Completa todos los campos.'); return; }
+    btn.disabled = true; btn.textContent = '…'; errEl.hidden = true;
+    try {
+      if (tab === 'signin') { await signIn(email, pwd); }
+      else { await signUp(email, pwd); }
+      await onAuthSuccess();
+    } catch(e) {
+      btn.disabled = false; btn.textContent = tab === 'signin' ? 'Entrar' : 'Crear cuenta';
+      if (e.message === 'confirm_email') showErr('Revisa tu correo y haz clic en el enlace de confirmación.');
+      else showErr(e.message || 'Error al iniciar sesión.');
+    }
+  };
+  scr.querySelector('#auth-email').addEventListener('keydown', e => { if (e.key==='Enter') scr.querySelector('#auth-pwd').focus(); });
+  scr.querySelector('#auth-pwd').addEventListener('keydown', e => { if (e.key==='Enter') scr.querySelector('#auth-submit').click(); });
+}
+async function onAuthSuccess() {
+  hideAuthScreen();
+  await loadPlan();
+  await syncDown();
+  render();
+  checkDue();
+}
+
 /* ---------- Arranque ---------- */
-applyTheme(pref('theme', (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'noche' : 'marfil'));
-applyLayout(pref('layout', 'list'));
-// Inyecta los iconos SVG estáticos (☰ del header, + de Nuevo, logo del drawer)
-document.querySelectorAll('[data-ico]').forEach(el => el.insertAdjacentHTML('afterbegin', svg(el.dataset.ico)));
-render();
-checkDue();
-setInterval(() => { if ((activeSection === 'inicio' || activeSection === 'loops') && document.getElementById('modal-overlay').hidden) tickCountdowns(); }, 1000);
-setInterval(() => { checkDue(); }, 60000);
+async function boot() {
+  applyTheme(pref('theme', (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'noche' : 'marfil'));
+  applyLayout(pref('layout', 'list'));
+  document.querySelectorAll('[data-ico]').forEach(el => el.insertAdjacentHTML('afterbegin', svg(el.dataset.ico)));
+  const s = await ensureSession();
+  if (!s) { showAuthScreen(); return; }
+  await loadPlan();
+  await syncDown();
+  render();
+  checkDue();
+  setInterval(() => { if ((activeSection === 'inicio' || activeSection === 'loops') && document.getElementById('modal-overlay').hidden) tickCountdowns(); }, 1000);
+  setInterval(() => { checkDue(); }, 60000);
+}
+boot();
