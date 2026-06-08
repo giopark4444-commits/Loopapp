@@ -1896,10 +1896,10 @@ async function removeShare(shareId) {
 async function fetchShared() {
   const s = await ensureSession(); if (!s || !SB.url) { sharedLoops = []; return; }
   try {
-    const r = await fetch(`${SB.url}/rest/v1/loop_shares?grantee_id=eq.${s.user.id}&select=permission,loops(client_id,data,owner_id)`, { headers: sbHeaders() });
+    const r = await fetch(`${SB.url}/rest/v1/loop_shares?grantee_id=eq.${s.user.id}&select=permission,loops(id,client_id,data,owner_id)`, { headers: sbHeaders() });
     if (!r.ok) { sharedLoops = []; return; }
     const rows = await r.json();
-    sharedLoops = rows.filter(x => x.loops && x.loops.data).map(x => ({ ...x.loops.data, id: x.loops.client_id, _shared: true, _perm: x.permission, _owner: x.loops.owner_id }));
+    sharedLoops = rows.filter(x => x.loops && x.loops.data).map(x => ({ ...x.loops.data, id: x.loops.client_id, _shared: true, _perm: x.permission, _owner: x.loops.owner_id, _uuid: x.loops.id }));
   } catch(e) { sharedLoops = []; }
 }
 
@@ -1963,17 +1963,36 @@ async function renderCompartidos(v) {
   el.innerHTML = sharedLoops.map(l => {
     const st = STATES[statusOf(l)], cd = cdParts(l), cat = catOf(l);
     const badge = l._perm === 'edit' ? '<span class="tag auto">Puedes editar</span>' : '<span class="tag task">Solo ver</span>';
-    return `<div class="row" style="--st:${st.color}">
+    const canCheck = l._perm === 'edit' && recurOf(l);
+    return `<div class="row" data-cid="${l.id}" style="--st:${st.color}">
       <div class="row-top">
         <span class="ic">${renderIcon(l.icon || cat.icon)}</span>
         <div class="mid"><div class="t">${escapeHtml(l.title)}</div>
           <div class="m">${badge} ${recurLabel(l)}${l.amount ? ' · ' + amtLabel(l) : ''}</div>
           ${l.notes ? `<div class="note">${escapeHtml(l.notes)}</div>` : ''}</div>
         <div class="right"><div class="cd">${cd.big}</div><div class="cl">${cd.cl}</div></div>
+        ${canCheck ? `<button class="chk" data-cid="${l.id}" title="Marcar ${l.amount ? 'pagado' : 'hecho'}">${svg('check')}</button>` : ''}
       </div>
       <div class="rowbar"><i style="width:${cd.pct}%"></i></div>
     </div>`;
   }).join('');
+  el.querySelectorAll('.chk[data-cid]').forEach(b => b.onclick = (e) => { e.stopPropagation(); markDoneShared(b.dataset.cid); });
+}
+async function markDoneShared(cid) {
+  const loop = sharedLoops.find(l => l.id === cid); if (!loop || !SB.url) return;
+  const s = await ensureSession(); if (!s) return;
+  const next = nextCycle(loop);
+  const upd = { ...loop }; const uuid = upd._uuid;
+  delete upd._shared; delete upd._perm; delete upd._owner; delete upd._uuid;
+  upd.history = (upd.history || []).concat([upd.nextDate]);
+  if (next) upd.nextDate = next;
+  try {
+    await fetch(`${SB.url}/rest/v1/loops?id=eq.${uuid}`, {
+      method: 'PATCH', headers: { ...sbHeaders(), Prefer: 'return=minimal' },
+      body: JSON.stringify({ next_date: upd.nextDate, data: upd })
+    });
+  } catch(e) {}
+  const v = document.getElementById('view'); if (v && activeSection === 'compartidos') renderCompartidos(v);
 }
 
 /* -- Modal upsell Full -- */
