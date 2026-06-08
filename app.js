@@ -4,7 +4,14 @@
    ============================================================ */
 const STORE_KEY = 'loopapp.loops.v1';
 const AUTH_SESSION_KEY = 'loopapp.session';
-const FULL_PRICES = { month: '$9.900', year: '$79.900', perMonthYear: '$6.658', currency: 'COP', save: '33%' };
+const PRICES = window.LOOPAPP_PRICES || {
+  currency: 'COP',
+  lifetime: { label: 'De por vida', price: '$120.000', note: 'Pago único · para siempre', badge: 'Mejor valor', best: true },
+  year:     { label: 'Anual',       price: '$79.900',  note: '≈ $6.658/mes',             badge: 'Ahorra 33%' },
+  month:    { label: 'Mensual',     price: '$9.900',   note: 'Cancela cuando quieras' },
+};
+const PLAN_ORDER = ['lifetime', 'year', 'month'];
+const PLAN_SUFFIX = { lifetime: '', year: '/año', month: '/mes' };
 let _session = null;
 let _plan = 'free';
 
@@ -1383,17 +1390,13 @@ function showUpgradeModal(reason) {
     <h2>Hazte Full</h2>
     <p class="modal-sub">${reason === 'limit' ? 'Llegaste a los 10 loops del plan gratis. ' : ''}Loops ilimitados, compartir sin límites y más.</p>
     <div class="plan-cards">
-      <button class="plan-card best" data-interval="year">
-        <div class="plan-badge">Ahorra ${FULL_PRICES.save}</div>
-        <div class="plan-name">Anual</div>
-        <div class="plan-price">${FULL_PRICES.year}<span>/año</span></div>
-        <div class="plan-note">≈ ${FULL_PRICES.perMonthYear}/mes · ${FULL_PRICES.currency}</div>
-      </button>
-      <button class="plan-card" data-interval="month">
-        <div class="plan-name">Mensual</div>
-        <div class="plan-price">${FULL_PRICES.month}<span>/mes</span></div>
-        <div class="plan-note">${FULL_PRICES.currency} · cancela cuando quieras</div>
-      </button>
+      ${PLAN_ORDER.filter(k => PRICES[k]).map(k => { const p = PRICES[k]; return `
+      <button class="plan-card${p.best ? ' best' : ''}" data-interval="${k}">
+        ${p.badge ? `<div class="plan-badge">${p.badge}</div>` : ''}
+        <div class="plan-name">${p.label}</div>
+        <div class="plan-price">${p.price}<span>${PLAN_SUFFIX[k] || ''}</span></div>
+        <div class="plan-note">${p.note} · ${PRICES.currency}</div>
+      </button>`; }).join('')}
     </div>
     <div class="modal-actions"><button class="btn btn-ghost" id="btn-cancel-full">Ahora no</button></div>`;
   ov.hidden = false;
