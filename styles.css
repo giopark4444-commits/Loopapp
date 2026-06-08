@@ -205,7 +205,10 @@ svg { display: block; }
 .dd-add svg { width: 14px; height: 14px; }
 .dd-empty { color: var(--dim); font-size: 13px; padding: 22px; text-align: center; line-height: 1.5; }
 .agenda-day { margin-top: 6px; }
-.ag-h { font-family: var(--serif); font-size: 15px; font-weight: 600; padding: 12px 16px 2px; text-transform: capitalize; }
+.ag-h { font-family: var(--serif); font-size: 15px; font-weight: 600; padding: 12px 16px 2px; text-transform: capitalize;
+  display: flex; align-items: center; justify-content: space-between; }
+.ag-c { font-family: var(--sans, inherit); font-size: 12px; font-weight: 700; color: var(--dim); background: var(--accent-tint);
+  border-radius: 999px; min-width: 22px; text-align: center; padding: 2px 7px; text-transform: none; }
 
 /* ---------- Ajustes ---------- */
 .opt { display: flex; align-items: center; gap: 13px; width: calc(100% - 32px); margin: 0 16px; padding: 14px 4px;
@@ -343,24 +346,67 @@ body { -webkit-tap-highlight-color: transparent; }
 .hd { padding-top: max(22px, env(safe-area-inset-top)); }
 
 /* ===========================================================
-   Escritorio: menú lateral fijo + contenido en 2 columnas
+   TELÉFONO (base, < 760px) — táctil, una columna, menú deslizable
+   El diseño base ya está optimizado para iPhone/Android:
+   targets grandes, safe-areas, sin efectos de hover.
    =========================================================== */
-@media (min-width: 900px) {
+
+/* ===========================================================
+   TABLET (760–1099px) — más aire, dos columnas, menú deslizable
+   =========================================================== */
+@media (min-width: 760px) and (max-width: 1099px) {
+  #app { max-width: 740px; padding: 0 24px 64px; }
+  .hd { padding-left: 4px; padding-right: 4px; }
+  .list { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; }
+  .stat-grid { grid-template-columns: repeat(3, 1fr); }
+  .sum, .catbar, .seg, .search-input { max-width: 620px; }
+  .hero { max-width: 580px; margin-left: auto; margin-right: auto; }
+  .cal-grid { max-width: 660px; margin-left: auto; margin-right: auto; }
+  .day-detail, .agenda-day { max-width: 660px; margin-left: auto; margin-right: auto; }
+  .insights, .statusbar, .chart { max-width: 660px; }
+  .drawer { width: 60%; max-width: 380px; }
+  .modal { max-width: 600px; }
+  .newbtn { padding: 10px 18px; }
+}
+
+/* ===========================================================
+   ESCRITORIO (≥ 1100px) — barra lateral fija, multicolumna, ratón
+   =========================================================== */
+@media (min-width: 1100px) {
   .burger { display: none; }
   .scrim { display: none !important; }
   .drawer { position: fixed; top: 0; left: 0; bottom: 0; width: 256px; transform: none !important;
     box-shadow: none; border-right: 1px solid var(--line); padding: 26px 16px; overflow-y: auto; }
-  #app { margin-left: 256px; max-width: 960px; padding: 0 32px 48px; }
+  #app { margin-left: 256px; max-width: 1000px; padding: 0 40px 56px; }
   .hd { padding-left: 6px; padding-right: 6px; }
-  .list { display: grid; grid-template-columns: 1fr 1fr; column-gap: 26px; }
+  .list { display: grid; grid-template-columns: 1fr 1fr; column-gap: 26px; row-gap: 0; }
   .stat-grid { grid-template-columns: repeat(3, 1fr); }
-  .catbar, .seg, .search-input { max-width: 560px; }
-  .hero { max-width: 620px; }
-  .cal-grid { max-width: 680px; }
-  .modal { max-width: 600px; }
+  .catbar, .seg, .search-input { max-width: 600px; }
+  .hero { max-width: 640px; }
+  .cal-grid { max-width: 720px; }
+  .modal { max-width: 620px; }
 }
-@media (min-width: 1320px) {
-  #app { margin-left: 300px; margin-right: auto; }
+/* Pantallas muy anchas: aprovechar el espacio con 3 columnas */
+@media (min-width: 1500px) {
+  #app { margin-left: 300px; max-width: 1200px; }
+  .list { grid-template-columns: 1fr 1fr 1fr; column-gap: 22px; }
+  body[data-layout="comfy"] .list { grid-template-columns: 1fr 1fr; }
+}
+
+/* ===========================================================
+   PUNTERO FINO (ratón / trackpad) — afecta solo a desktop/laptop,
+   NO a iPhone/Android. Estados :hover y micro-interacciones.
+   =========================================================== */
+@media (hover: hover) and (pointer: fine) {
+  .row { transition: transform .12s ease, box-shadow .14s ease, border-color .14s ease; }
+  .row:hover { transform: translateY(-1px); border-color: var(--line2); box-shadow: 0 4px 14px rgba(0,0,0,.06); }
+  .nav a:hover { background: var(--accent-tint); }
+  .opt:hover, .fa-btn:hover, .lay:hover, .wl-btn:hover { background: var(--accent-tint); border-color: var(--line2); }
+  .chk:hover { background: var(--ok); border-color: var(--ok); color: #fff; }
+  .iconbtn:hover, .undo-btn:hover { background: var(--accent-tint); color: var(--accent); }
+  .cal-cell[data-date]:hover { outline: 2px solid var(--accent); outline-offset: -2px; cursor: pointer; }
+  .swatch:hover .sw { transform: scale(1.05); }
+  .newbtn:hover, .btn-primary:hover { filter: brightness(1.05); }
 }
 
 /* ===========================================================
@@ -401,3 +447,19 @@ body[data-layout="comfy"] .dd-add { padding: 9px 14px; font-size: 13.5px; }
 body[data-layout="cards"] .list { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin: 10px 14px 0; }
 body[data-layout="cards"] .row { border: 1px solid var(--line); border-radius: 16px; background: var(--panel); padding: 15px; box-shadow: var(--shadow); }
 body[data-layout="cards"] .row:active { background: var(--panel); }
+
+/* ===========================================================
+   Estadísticas: bloque de Resumen (insights)
+   =========================================================== */
+.insights { display: flex; flex-direction: column; gap: 2px; }
+.ins-row { display: flex; align-items: center; gap: 11px; padding: 9px 2px; font-size: 13.5px; color: var(--text);
+  border-bottom: 1px solid var(--line); }
+.ins-row:last-child { border-bottom: none; }
+.ins-row b { font-weight: 700; }
+.ins-ic { flex: 0 0 30px; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 9px; background: var(--accent-tint); color: var(--accent); }
+.ins-ic svg { width: 16px; height: 16px; }
+.ins-bad { color: var(--overdue); font-weight: 700; }
+
+/* Datos y respaldo: línea de resumen */
+.data-info { font-size: 12.5px; color: var(--dim); padding: 2px 2px 10px; }

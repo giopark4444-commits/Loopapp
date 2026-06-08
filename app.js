@@ -584,17 +584,19 @@ function calWeek() {
 }
 function calAgenda() {
   const today = todayMid();
-  let html = '<div class="sec-title" style="padding-top:8px">Próximos 7 días</div>', any = false;
-  for (let i = 0; i < 7; i++) {
+  const DAYS = 14;
+  let blocks = '', any = false, totalCount = 0;
+  for (let i = 0; i < DAYS; i++) {
     const date = new Date(today); date.setDate(today.getDate() + i);
     const items = loops.filter(l => occursOn(l, date)).sort((a,b) => STATES[statusOf(a)].order - STATES[statusOf(b)].order);
     if (!items.length) continue;
-    any = true;
+    any = true; totalCount += items.length;
     const nice = i === 0 ? 'Hoy' : i === 1 ? 'Mañana' : date.toLocaleDateString('es', { weekday:'long', day:'numeric', month:'short' });
-    html += `<div class="agenda-day"><div class="ag-h">${nice}</div><div class="list">${items.map(rowHTML).join('')}</div></div>`;
+    blocks += `<div class="agenda-day"><div class="ag-h"><span>${nice}</span><span class="ag-c">${items.length}</span></div><div class="list">${items.map(rowHTML).join('')}</div></div>`;
   }
-  if (!any) html += `<div class="empty"><div class="em">${svg('clock')}</div><h3>Semana libre</h3><p>No hay nada en los próximos 7 días.</p></div>`;
-  return html;
+  const head = `<div class="sec-title" style="padding-top:8px">Próximos 14 días${totalCount ? ` · ${totalCount}` : ''}</div>`;
+  if (!any) return head + `<div class="empty"><div class="em">${svg('clock')}</div><h3>Dos semanas libres</h3><p>No hay nada en los próximos 14 días.</p></div>`;
+  return head + blocks;
 }
 function renderCalendario(v) {
   const seg = (k,l) => `<button class="${calView===k?'on':''}" data-cv="${k}">${l}</button>`;
@@ -672,6 +674,27 @@ function renderStats(v) {
   const dload = doneByMonth();
   const maxD = Math.max(1, ...dload.map(x => x.count));
   const doneChart = `<div class="chart">${dload.map(x => `<div class="chart-col"><div class="chart-bar" style="height:${Math.max(3, Math.round(x.count/maxD*100))}px;background:var(--ok)"></div><div class="chart-n">${x.count}</div><div class="chart-l">${x.label}</div></div>`).join('')}</div>`;
+  // ---- Insights: gasto, categoría top, racha, proyección ----
+  const def = pref('currency','USD');
+  const withAmt = loops.filter(l => l.amount);
+  const byCur = {}; withAmt.forEach(l => { const c = l.currency || def; byCur[c] = (byCur[c] || 0) + monthlyCost(l); });
+  const curs = Object.keys(byCur);
+  const primary = byCur[def] !== undefined ? def : (curs.slice().sort((a,b) => byCur[b]-byCur[a])[0] || def);
+  const monthlySpend = byCur[primary] || 0;
+  const byCat = {}; withAmt.filter(l => (l.currency||def)===primary).forEach(l => { byCat[l.category] = (byCat[l.category]||0) + monthlyCost(l); });
+  const topCat = Object.entries(byCat).sort((a,b) => b[1]-a[1])[0];
+  const doneSorted = done.slice().sort((a,b) => b.ts - a.ts);
+  let streak = 0; for (const e of doneSorted) { if (e.ts <= parseDate(e.date).getTime() + 86400000) streak++; else break; }
+  const busiest = load.reduce((m,x) => x.count > m.count ? x : m, load[0] || { count:0 });
+  const nextL = loops.filter(l => statusOf(l) !== 'neutral').sort((a,b) => daysUntil(a.nextDate) - daysUntil(b.nextDate))[0];
+  const doneThisMonth = dload.length ? dload[dload.length-1].count : 0;
+  const ins = [];
+  if (nextL) { const d = daysUntil(nextL.nextDate); ins.push({ icon:'clock', t:`Lo próximo: <b>${escapeHtml(nextL.title)}</b> ${d<0?'<span class="ins-bad">vencido</span>':d===0?'hoy':d===1?'mañana':`en ${d} días`}` }); }
+  if (topCat) { const c = CATEGORIES[topCat[0]] || CATEGORIES.other; ins.push({ icon:c.icon, t:`Tu mayor gasto: <b>${c.label}</b> · ${money0(topCat[1],primary)}/mes` }); }
+  if (streak > 0) ins.push({ icon:'flame', t:`Racha de <b>${streak}</b> a tiempo seguido${streak>1?'s':''}` });
+  if (busiest && busiest.count) ins.push({ icon:'calendar', t:`Mes más cargado: <b style="text-transform:capitalize">${busiest.label}</b> · ${busiest.count} vencimientos` });
+  if (monthlySpend) ins.push({ icon:'wallet', t:`Proyección 12 meses: <b>${money0(monthlySpend*12,primary)}</b>${curs.length>1?' · '+primary:''}` });
+  const insHTML = ins.length ? `<div class="brk"><h4>Resumen</h4><div class="insights">${ins.map(x => `<div class="ins-row"><span class="ins-ic">${svg(x.icon)}</span><span>${x.t}</span></div>`).join('')}</div></div>` : '';
   v.innerHTML = `
     <div class="sec-title">Estadísticas</div>
     <div class="stat-grid">
@@ -681,7 +704,10 @@ function renderStats(v) {
       <div class="stat"><div class="n">${manualesPend}</div><div class="t">manuales por pagar</div></div>
       <div class="stat"><div class="n">${pagados}</div><div class="t">completados</div></div>
       <div class="stat"><div class="n" style="color:var(--ok)">${pctOnTime}%</div><div class="t">a tiempo</div></div>
+      ${monthlySpend ? `<div class="stat"><div class="n">${money0(monthlySpend*12, primary)}</div><div class="t">proyectado / año</div></div>` : ''}
+      <div class="stat"><div class="n">${doneThisMonth}</div><div class="t">hechos este mes</div></div>
     </div>
+    ${insHTML}
     <div class="brk"><h4>Estado general</h4>${statusBar}${legend}</div>
     <div class="brk"><h4>Carga próximos 6 meses</h4>${chart}</div>
     ${done.length ? `<div class="brk"><h4>Completados por mes</h4>${doneChart}</div>` : ''}`;
@@ -778,9 +804,12 @@ function renderAjustes(v) {
       </div>` : `
       <button class="opt" id="o-calsub">${svg('repeat')} Suscripción que se actualiza sola (webcal)</button>`}
     </div>
-    <div class="brk"><h4>Datos</h4>
-      <button class="opt" id="o-export">${svg('download')} Exportar copia de seguridad</button>
-      <button class="opt" id="o-import">${svg('upload')} Importar copia</button>
+    <div class="brk"><h4>Datos y respaldo</h4>
+      <div class="data-info">${loops.length} loop${loops.length===1?'':'s'} · ${getDone().length} completado${getDone().length===1?'':'s'} · ${getUserCats().length} categoría${getUserCats().length===1?'':'s'} propia${getUserCats().length===1?'':'s'}</div>
+      <button class="opt" id="o-export">${svg('download')} Exportar copia (archivo)</button>
+      <button class="opt" id="o-copy">${svg('copy')} Copiar respaldo (texto)</button>
+      <button class="opt" id="o-import">${svg('upload')} Importar desde archivo</button>
+      <button class="opt" id="o-paste">${svg('file')} Restaurar desde texto pegado</button>
       <button class="opt" id="o-install" hidden>${svg('smartphone')} Instalar como app</button>
       <button class="opt danger" id="o-reset">${svg('rotate')} Restablecer datos de ejemplo</button></div>
     <p class="sub" style="text-align:center;margin:18px 16px 0;font-size:12px">Loopapp · tus datos se guardan en este dispositivo</p>`;
@@ -799,6 +828,8 @@ function renderAjustes(v) {
   const caloff = v.querySelector('#o-caloff'); if (caloff) caloff.onclick = () => { if (confirm('¿Desactivar la suscripción? Tus loops se quitarán de la nube.')) disableCal(); };
   v.querySelector('#o-notify').onclick = setupPush;
   v.querySelector('#o-export').onclick = exportData;
+  v.querySelector('#o-copy').onclick = copyBackup;
+  v.querySelector('#o-paste').onclick = pasteBackup;
   v.querySelector('#o-import').onclick = () => document.getElementById('import-file').click();
   v.querySelector('#o-reset').onclick = () => { if (confirm('¿Restablecer datos de ejemplo? (borra tus Loops actuales)')) { loops = seed(); save(); render(); } };
   const ib = v.querySelector('#o-install'); if (deferredPrompt) ib.hidden = false;
@@ -948,39 +979,87 @@ document.addEventListener('click', (e) => {
   if (m && !m.hidden && s && !m.contains(e.target) && !s.contains(e.target)) m.hidden = true;
 });
 
-/* Importar respaldo */
+/* ---------- Respaldo completo (loops + completados + categorías + prefs) ---------- */
+function normalizeLoop(l) {
+  return {
+    id: l.id || uid(), title: String(l.title || 'Sin nombre'),
+    category: CATEGORIES[l.category] ? l.category : 'routine', icon: l.icon || 'repeat',
+    amount: (l.amount === 0 || l.amount) ? Number(l.amount) : null,
+    currency: CURRENCIES[l.currency] ? l.currency : undefined, autoPay: !!l.autoPay,
+    recurrence: RECURRENCE[l.recurrence] ? l.recurrence : 'none',
+    recur: (l.recur && l.recur.unit) ? l.recur : undefined,
+    nextDate: /^\d{4}-\d{2}-\d{2}$/.test(l.nextDate) ? l.nextDate : offsetDate(7),
+    notifyDaysBefore: Number.isFinite(+l.notifyDaysBefore) ? +l.notifyDaysBefore : 3,
+    notes: String(l.notes || '').slice(0, 500),
+    history: Array.isArray(l.history) ? l.history : [],
+  };
+}
+function buildBackup() {
+  return {
+    app: 'loopapp', version: 2, exportedAt: new Date().toISOString(),
+    currency: pref('currency', 'USD'),
+    prefs: { defaultNotify: pref('defaultNotify','3'), defaultAuto: pref('defaultAuto','0'), theme: pref('theme','marfil'), layout: pref('layout','list') },
+    cats: getUserCats(), done: getDone(), loops,
+  };
+}
+function applyBackup(data) {
+  let arr, done, cats, prefs, currency;
+  if (Array.isArray(data)) { arr = data; }                       // formato antiguo (solo loops)
+  else if (data && Array.isArray(data.loops)) { arr = data.loops; done = data.done; cats = data.cats; prefs = data.prefs || {}; currency = data.currency; }
+  else throw new Error('formato');
+  if (Array.isArray(cats)) setUserCats(cats);                    // restaura categorías antes de validar loops
+  loops = arr.map(normalizeLoop);
+  if (Array.isArray(done)) setDone(done);
+  if (currency && CURRENCIES[currency]) setPref('currency', currency);
+  if (prefs) {
+    if (prefs.defaultNotify != null) setPref('defaultNotify', String(prefs.defaultNotify));
+    if (prefs.defaultAuto != null) setPref('defaultAuto', String(prefs.defaultAuto));
+    if (prefs.theme) applyTheme(prefs.theme);
+    if (prefs.layout) applyLayout(prefs.layout);
+  }
+  save(); render();
+}
+function backupCount(data) { return Array.isArray(data) ? data.length : (data && Array.isArray(data.loops) ? data.loops.length : 0); }
+
+/* Importar respaldo (archivo) */
 const importFile = document.getElementById('import-file');
 importFile.onchange = (e) => {
   const file = e.target.files[0]; if (!file) return;
   const r = new FileReader();
   r.onload = () => {
     try {
-      const raw = JSON.parse(r.result);
-      if (!Array.isArray(raw)) throw new Error('formato');
-      if (!confirm(`Importar ${raw.length} Loop${raw.length===1?'':'s'}? Esto reemplazará los actuales.`)) return;
-      loops = raw.map(l => ({
-        id: l.id || uid(), title: String(l.title || 'Sin nombre'),
-        category: CATEGORIES[l.category] ? l.category : 'routine', icon: l.icon || 'repeat',
-        amount: (l.amount === 0 || l.amount) ? Number(l.amount) : null,
-        currency: CURRENCIES[l.currency] ? l.currency : undefined, autoPay: !!l.autoPay,
-        recurrence: RECURRENCE[l.recurrence] ? l.recurrence : 'none',
-        recur: (l.recur && l.recur.unit) ? l.recur : undefined,
-        nextDate: /^\d{4}-\d{2}-\d{2}$/.test(l.nextDate) ? l.nextDate : offsetDate(7),
-        notifyDaysBefore: Number.isFinite(+l.notifyDaysBefore) ? +l.notifyDaysBefore : 3,
-        notes: String(l.notes || '').slice(0, 500),
-        history: Array.isArray(l.history) ? l.history : [],
-      }));
-      save(); render();
+      const data = JSON.parse(r.result);
+      const n = backupCount(data);
+      if (!n && !Array.isArray(data) && !(data && data.loops)) throw new Error('formato');
+      if (!confirm(`Importar ${n} Loop${n===1?'':'s'}? Esto reemplazará los datos actuales.`)) return;
+      applyBackup(data);
     } catch (err) { alert('Archivo no válido. Debe ser un respaldo .json de Loopapp.'); }
     finally { importFile.value = ''; }
   };
   r.readAsText(file);
 };
 function exportData() {
-  const blob = new Blob([JSON.stringify(loops, null, 2)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify(buildBackup(), null, 2)], { type: 'application/json' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
   a.download = `loopapp-backup-${fmtDate(todayMid())}.json`; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+function copyBackup() {
+  const text = JSON.stringify(buildBackup());
+  const done = () => alert('Respaldo copiado ✓\nGuárdalo en tus notas o envíatelo. Para restaurarlo usa “Restaurar desde texto pegado”.');
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done).catch(() => prompt('Copia este respaldo:', text));
+  else prompt('Copia este respaldo:', text);
+}
+function pasteBackup() {
+  const text = prompt('Pega aquí el texto del respaldo:');
+  if (!text) return;
+  try {
+    const data = JSON.parse(text.trim());
+    const n = backupCount(data);
+    if (!n && !(data && data.loops)) throw new Error('formato');
+    if (!confirm(`Restaurar ${n} Loop${n===1?'':'s'}? Esto reemplazará los datos actuales.`)) return;
+    applyBackup(data);
+  } catch (e) { alert('El texto no es un respaldo válido de Loopapp.'); }
 }
 
 /* ---------- Exportar al calendario (Apple / Google) ---------- */

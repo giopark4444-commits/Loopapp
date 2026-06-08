@@ -219,7 +219,10 @@ svg { display: block; }
 .dd-add svg { width: 14px; height: 14px; }
 .dd-empty { color: var(--dim); font-size: 13px; padding: 22px; text-align: center; line-height: 1.5; }
 .agenda-day { margin-top: 6px; }
-.ag-h { font-family: var(--serif); font-size: 15px; font-weight: 600; padding: 12px 16px 2px; text-transform: capitalize; }
+.ag-h { font-family: var(--serif); font-size: 15px; font-weight: 600; padding: 12px 16px 2px; text-transform: capitalize;
+  display: flex; align-items: center; justify-content: space-between; }
+.ag-c { font-family: var(--sans, inherit); font-size: 12px; font-weight: 700; color: var(--dim); background: var(--accent-tint);
+  border-radius: 999px; min-width: 22px; text-align: center; padding: 2px 7px; text-transform: none; }
 
 /* ---------- Ajustes ---------- */
 .opt { display: flex; align-items: center; gap: 13px; width: calc(100% - 32px); margin: 0 16px; padding: 14px 4px;
@@ -357,24 +360,67 @@ body { -webkit-tap-highlight-color: transparent; }
 .hd { padding-top: max(22px, env(safe-area-inset-top)); }
 
 /* ===========================================================
-   Escritorio: menú lateral fijo + contenido en 2 columnas
+   TELÉFONO (base, < 760px) — táctil, una columna, menú deslizable
+   El diseño base ya está optimizado para iPhone/Android:
+   targets grandes, safe-areas, sin efectos de hover.
    =========================================================== */
-@media (min-width: 900px) {
+
+/* ===========================================================
+   TABLET (760–1099px) — más aire, dos columnas, menú deslizable
+   =========================================================== */
+@media (min-width: 760px) and (max-width: 1099px) {
+  #app { max-width: 740px; padding: 0 24px 64px; }
+  .hd { padding-left: 4px; padding-right: 4px; }
+  .list { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; }
+  .stat-grid { grid-template-columns: repeat(3, 1fr); }
+  .sum, .catbar, .seg, .search-input { max-width: 620px; }
+  .hero { max-width: 580px; margin-left: auto; margin-right: auto; }
+  .cal-grid { max-width: 660px; margin-left: auto; margin-right: auto; }
+  .day-detail, .agenda-day { max-width: 660px; margin-left: auto; margin-right: auto; }
+  .insights, .statusbar, .chart { max-width: 660px; }
+  .drawer { width: 60%; max-width: 380px; }
+  .modal { max-width: 600px; }
+  .newbtn { padding: 10px 18px; }
+}
+
+/* ===========================================================
+   ESCRITORIO (≥ 1100px) — barra lateral fija, multicolumna, ratón
+   =========================================================== */
+@media (min-width: 1100px) {
   .burger { display: none; }
   .scrim { display: none !important; }
   .drawer { position: fixed; top: 0; left: 0; bottom: 0; width: 256px; transform: none !important;
     box-shadow: none; border-right: 1px solid var(--line); padding: 26px 16px; overflow-y: auto; }
-  #app { margin-left: 256px; max-width: 960px; padding: 0 32px 48px; }
+  #app { margin-left: 256px; max-width: 1000px; padding: 0 40px 56px; }
   .hd { padding-left: 6px; padding-right: 6px; }
-  .list { display: grid; grid-template-columns: 1fr 1fr; column-gap: 26px; }
+  .list { display: grid; grid-template-columns: 1fr 1fr; column-gap: 26px; row-gap: 0; }
   .stat-grid { grid-template-columns: repeat(3, 1fr); }
-  .catbar, .seg, .search-input { max-width: 560px; }
-  .hero { max-width: 620px; }
-  .cal-grid { max-width: 680px; }
-  .modal { max-width: 600px; }
+  .catbar, .seg, .search-input { max-width: 600px; }
+  .hero { max-width: 640px; }
+  .cal-grid { max-width: 720px; }
+  .modal { max-width: 620px; }
 }
-@media (min-width: 1320px) {
-  #app { margin-left: 300px; margin-right: auto; }
+/* Pantallas muy anchas: aprovechar el espacio con 3 columnas */
+@media (min-width: 1500px) {
+  #app { margin-left: 300px; max-width: 1200px; }
+  .list { grid-template-columns: 1fr 1fr 1fr; column-gap: 22px; }
+  body[data-layout="comfy"] .list { grid-template-columns: 1fr 1fr; }
+}
+
+/* ===========================================================
+   PUNTERO FINO (ratón / trackpad) — afecta solo a desktop/laptop,
+   NO a iPhone/Android. Estados :hover y micro-interacciones.
+   =========================================================== */
+@media (hover: hover) and (pointer: fine) {
+  .row { transition: transform .12s ease, box-shadow .14s ease, border-color .14s ease; }
+  .row:hover { transform: translateY(-1px); border-color: var(--line2); box-shadow: 0 4px 14px rgba(0,0,0,.06); }
+  .nav a:hover { background: var(--accent-tint); }
+  .opt:hover, .fa-btn:hover, .lay:hover, .wl-btn:hover { background: var(--accent-tint); border-color: var(--line2); }
+  .chk:hover { background: var(--ok); border-color: var(--ok); color: #fff; }
+  .iconbtn:hover, .undo-btn:hover { background: var(--accent-tint); color: var(--accent); }
+  .cal-cell[data-date]:hover { outline: 2px solid var(--accent); outline-offset: -2px; cursor: pointer; }
+  .swatch:hover .sw { transform: scale(1.05); }
+  .newbtn:hover, .btn-primary:hover { filter: brightness(1.05); }
 }
 
 /* ===========================================================
@@ -416,6 +462,22 @@ body[data-layout="cards"] .list { display: grid; grid-template-columns: repeat(a
 body[data-layout="cards"] .row { border: 1px solid var(--line); border-radius: 16px; background: var(--panel); padding: 15px; box-shadow: var(--shadow); }
 body[data-layout="cards"] .row:active { background: var(--panel); }
 
+/* ===========================================================
+   Estadísticas: bloque de Resumen (insights)
+   =========================================================== */
+.insights { display: flex; flex-direction: column; gap: 2px; }
+.ins-row { display: flex; align-items: center; gap: 11px; padding: 9px 2px; font-size: 13.5px; color: var(--text);
+  border-bottom: 1px solid var(--line); }
+.ins-row:last-child { border-bottom: none; }
+.ins-row b { font-weight: 700; }
+.ins-ic { flex: 0 0 30px; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 9px; background: var(--accent-tint); color: var(--accent); }
+.ins-ic svg { width: 16px; height: 16px; }
+.ins-bad { color: var(--overdue); font-weight: 700; }
+
+/* Datos y respaldo: línea de resumen */
+.data-info { font-size: 12.5px; color: var(--dim); padding: 2px 2px 10px; }
+
 </style>
 </head>
 <body>
@@ -447,7 +509,7 @@ body[data-layout="cards"] .row:active { background: var(--panel); }
   <!-- Input oculto para importar respaldo -->
   <input id="import-file" type="file" accept="application/json,.json" hidden />
 
-  <script>
+<script>
 /* Configuración de Supabase para Loopapp (claves públicas — seguras de exponer).
    La escritura está protegida por la Edge Function + clave de edición. */
 window.LOOPAPP_SUPABASE = {
@@ -462,7 +524,7 @@ window.LOOPAPP_PUSH = {
 };
 
 </script>
-  <script>
+<script>
 /* ============================================================
    Loopapp — Todo lo que se repite, a la vista
    PWA sin dependencias. Estado en localStorage.
@@ -1049,17 +1111,19 @@ function calWeek() {
 }
 function calAgenda() {
   const today = todayMid();
-  let html = '<div class="sec-title" style="padding-top:8px">Próximos 7 días</div>', any = false;
-  for (let i = 0; i < 7; i++) {
+  const DAYS = 14;
+  let blocks = '', any = false, totalCount = 0;
+  for (let i = 0; i < DAYS; i++) {
     const date = new Date(today); date.setDate(today.getDate() + i);
     const items = loops.filter(l => occursOn(l, date)).sort((a,b) => STATES[statusOf(a)].order - STATES[statusOf(b)].order);
     if (!items.length) continue;
-    any = true;
+    any = true; totalCount += items.length;
     const nice = i === 0 ? 'Hoy' : i === 1 ? 'Mañana' : date.toLocaleDateString('es', { weekday:'long', day:'numeric', month:'short' });
-    html += `<div class="agenda-day"><div class="ag-h">${nice}</div><div class="list">${items.map(rowHTML).join('')}</div></div>`;
+    blocks += `<div class="agenda-day"><div class="ag-h"><span>${nice}</span><span class="ag-c">${items.length}</span></div><div class="list">${items.map(rowHTML).join('')}</div></div>`;
   }
-  if (!any) html += `<div class="empty"><div class="em">${svg('clock')}</div><h3>Semana libre</h3><p>No hay nada en los próximos 7 días.</p></div>`;
-  return html;
+  const head = `<div class="sec-title" style="padding-top:8px">Próximos 14 días${totalCount ? ` · ${totalCount}` : ''}</div>`;
+  if (!any) return head + `<div class="empty"><div class="em">${svg('clock')}</div><h3>Dos semanas libres</h3><p>No hay nada en los próximos 14 días.</p></div>`;
+  return head + blocks;
 }
 function renderCalendario(v) {
   const seg = (k,l) => `<button class="${calView===k?'on':''}" data-cv="${k}">${l}</button>`;
@@ -1137,6 +1201,27 @@ function renderStats(v) {
   const dload = doneByMonth();
   const maxD = Math.max(1, ...dload.map(x => x.count));
   const doneChart = `<div class="chart">${dload.map(x => `<div class="chart-col"><div class="chart-bar" style="height:${Math.max(3, Math.round(x.count/maxD*100))}px;background:var(--ok)"></div><div class="chart-n">${x.count}</div><div class="chart-l">${x.label}</div></div>`).join('')}</div>`;
+  // ---- Insights: gasto, categoría top, racha, proyección ----
+  const def = pref('currency','USD');
+  const withAmt = loops.filter(l => l.amount);
+  const byCur = {}; withAmt.forEach(l => { const c = l.currency || def; byCur[c] = (byCur[c] || 0) + monthlyCost(l); });
+  const curs = Object.keys(byCur);
+  const primary = byCur[def] !== undefined ? def : (curs.slice().sort((a,b) => byCur[b]-byCur[a])[0] || def);
+  const monthlySpend = byCur[primary] || 0;
+  const byCat = {}; withAmt.filter(l => (l.currency||def)===primary).forEach(l => { byCat[l.category] = (byCat[l.category]||0) + monthlyCost(l); });
+  const topCat = Object.entries(byCat).sort((a,b) => b[1]-a[1])[0];
+  const doneSorted = done.slice().sort((a,b) => b.ts - a.ts);
+  let streak = 0; for (const e of doneSorted) { if (e.ts <= parseDate(e.date).getTime() + 86400000) streak++; else break; }
+  const busiest = load.reduce((m,x) => x.count > m.count ? x : m, load[0] || { count:0 });
+  const nextL = loops.filter(l => statusOf(l) !== 'neutral').sort((a,b) => daysUntil(a.nextDate) - daysUntil(b.nextDate))[0];
+  const doneThisMonth = dload.length ? dload[dload.length-1].count : 0;
+  const ins = [];
+  if (nextL) { const d = daysUntil(nextL.nextDate); ins.push({ icon:'clock', t:`Lo próximo: <b>${escapeHtml(nextL.title)}</b> ${d<0?'<span class="ins-bad">vencido</span>':d===0?'hoy':d===1?'mañana':`en ${d} días`}` }); }
+  if (topCat) { const c = CATEGORIES[topCat[0]] || CATEGORIES.other; ins.push({ icon:c.icon, t:`Tu mayor gasto: <b>${c.label}</b> · ${money0(topCat[1],primary)}/mes` }); }
+  if (streak > 0) ins.push({ icon:'flame', t:`Racha de <b>${streak}</b> a tiempo seguido${streak>1?'s':''}` });
+  if (busiest && busiest.count) ins.push({ icon:'calendar', t:`Mes más cargado: <b style="text-transform:capitalize">${busiest.label}</b> · ${busiest.count} vencimientos` });
+  if (monthlySpend) ins.push({ icon:'wallet', t:`Proyección 12 meses: <b>${money0(monthlySpend*12,primary)}</b>${curs.length>1?' · '+primary:''}` });
+  const insHTML = ins.length ? `<div class="brk"><h4>Resumen</h4><div class="insights">${ins.map(x => `<div class="ins-row"><span class="ins-ic">${svg(x.icon)}</span><span>${x.t}</span></div>`).join('')}</div></div>` : '';
   v.innerHTML = `
     <div class="sec-title">Estadísticas</div>
     <div class="stat-grid">
@@ -1146,7 +1231,10 @@ function renderStats(v) {
       <div class="stat"><div class="n">${manualesPend}</div><div class="t">manuales por pagar</div></div>
       <div class="stat"><div class="n">${pagados}</div><div class="t">completados</div></div>
       <div class="stat"><div class="n" style="color:var(--ok)">${pctOnTime}%</div><div class="t">a tiempo</div></div>
+      ${monthlySpend ? `<div class="stat"><div class="n">${money0(monthlySpend*12, primary)}</div><div class="t">proyectado / año</div></div>` : ''}
+      <div class="stat"><div class="n">${doneThisMonth}</div><div class="t">hechos este mes</div></div>
     </div>
+    ${insHTML}
     <div class="brk"><h4>Estado general</h4>${statusBar}${legend}</div>
     <div class="brk"><h4>Carga próximos 6 meses</h4>${chart}</div>
     ${done.length ? `<div class="brk"><h4>Completados por mes</h4>${doneChart}</div>` : ''}`;
@@ -1243,9 +1331,12 @@ function renderAjustes(v) {
       </div>` : `
       <button class="opt" id="o-calsub">${svg('repeat')} Suscripción que se actualiza sola (webcal)</button>`}
     </div>
-    <div class="brk"><h4>Datos</h4>
-      <button class="opt" id="o-export">${svg('download')} Exportar copia de seguridad</button>
-      <button class="opt" id="o-import">${svg('upload')} Importar copia</button>
+    <div class="brk"><h4>Datos y respaldo</h4>
+      <div class="data-info">${loops.length} loop${loops.length===1?'':'s'} · ${getDone().length} completado${getDone().length===1?'':'s'} · ${getUserCats().length} categoría${getUserCats().length===1?'':'s'} propia${getUserCats().length===1?'':'s'}</div>
+      <button class="opt" id="o-export">${svg('download')} Exportar copia (archivo)</button>
+      <button class="opt" id="o-copy">${svg('copy')} Copiar respaldo (texto)</button>
+      <button class="opt" id="o-import">${svg('upload')} Importar desde archivo</button>
+      <button class="opt" id="o-paste">${svg('file')} Restaurar desde texto pegado</button>
       <button class="opt" id="o-install" hidden>${svg('smartphone')} Instalar como app</button>
       <button class="opt danger" id="o-reset">${svg('rotate')} Restablecer datos de ejemplo</button></div>
     <p class="sub" style="text-align:center;margin:18px 16px 0;font-size:12px">Loopapp · tus datos se guardan en este dispositivo</p>`;
@@ -1264,6 +1355,8 @@ function renderAjustes(v) {
   const caloff = v.querySelector('#o-caloff'); if (caloff) caloff.onclick = () => { if (confirm('¿Desactivar la suscripción? Tus loops se quitarán de la nube.')) disableCal(); };
   v.querySelector('#o-notify').onclick = setupPush;
   v.querySelector('#o-export').onclick = exportData;
+  v.querySelector('#o-copy').onclick = copyBackup;
+  v.querySelector('#o-paste').onclick = pasteBackup;
   v.querySelector('#o-import').onclick = () => document.getElementById('import-file').click();
   v.querySelector('#o-reset').onclick = () => { if (confirm('¿Restablecer datos de ejemplo? (borra tus Loops actuales)')) { loops = seed(); save(); render(); } };
   const ib = v.querySelector('#o-install'); if (deferredPrompt) ib.hidden = false;
@@ -1413,39 +1506,87 @@ document.addEventListener('click', (e) => {
   if (m && !m.hidden && s && !m.contains(e.target) && !s.contains(e.target)) m.hidden = true;
 });
 
-/* Importar respaldo */
+/* ---------- Respaldo completo (loops + completados + categorías + prefs) ---------- */
+function normalizeLoop(l) {
+  return {
+    id: l.id || uid(), title: String(l.title || 'Sin nombre'),
+    category: CATEGORIES[l.category] ? l.category : 'routine', icon: l.icon || 'repeat',
+    amount: (l.amount === 0 || l.amount) ? Number(l.amount) : null,
+    currency: CURRENCIES[l.currency] ? l.currency : undefined, autoPay: !!l.autoPay,
+    recurrence: RECURRENCE[l.recurrence] ? l.recurrence : 'none',
+    recur: (l.recur && l.recur.unit) ? l.recur : undefined,
+    nextDate: /^\d{4}-\d{2}-\d{2}$/.test(l.nextDate) ? l.nextDate : offsetDate(7),
+    notifyDaysBefore: Number.isFinite(+l.notifyDaysBefore) ? +l.notifyDaysBefore : 3,
+    notes: String(l.notes || '').slice(0, 500),
+    history: Array.isArray(l.history) ? l.history : [],
+  };
+}
+function buildBackup() {
+  return {
+    app: 'loopapp', version: 2, exportedAt: new Date().toISOString(),
+    currency: pref('currency', 'USD'),
+    prefs: { defaultNotify: pref('defaultNotify','3'), defaultAuto: pref('defaultAuto','0'), theme: pref('theme','marfil'), layout: pref('layout','list') },
+    cats: getUserCats(), done: getDone(), loops,
+  };
+}
+function applyBackup(data) {
+  let arr, done, cats, prefs, currency;
+  if (Array.isArray(data)) { arr = data; }                       // formato antiguo (solo loops)
+  else if (data && Array.isArray(data.loops)) { arr = data.loops; done = data.done; cats = data.cats; prefs = data.prefs || {}; currency = data.currency; }
+  else throw new Error('formato');
+  if (Array.isArray(cats)) setUserCats(cats);                    // restaura categorías antes de validar loops
+  loops = arr.map(normalizeLoop);
+  if (Array.isArray(done)) setDone(done);
+  if (currency && CURRENCIES[currency]) setPref('currency', currency);
+  if (prefs) {
+    if (prefs.defaultNotify != null) setPref('defaultNotify', String(prefs.defaultNotify));
+    if (prefs.defaultAuto != null) setPref('defaultAuto', String(prefs.defaultAuto));
+    if (prefs.theme) applyTheme(prefs.theme);
+    if (prefs.layout) applyLayout(prefs.layout);
+  }
+  save(); render();
+}
+function backupCount(data) { return Array.isArray(data) ? data.length : (data && Array.isArray(data.loops) ? data.loops.length : 0); }
+
+/* Importar respaldo (archivo) */
 const importFile = document.getElementById('import-file');
 importFile.onchange = (e) => {
   const file = e.target.files[0]; if (!file) return;
   const r = new FileReader();
   r.onload = () => {
     try {
-      const raw = JSON.parse(r.result);
-      if (!Array.isArray(raw)) throw new Error('formato');
-      if (!confirm(`Importar ${raw.length} Loop${raw.length===1?'':'s'}? Esto reemplazará los actuales.`)) return;
-      loops = raw.map(l => ({
-        id: l.id || uid(), title: String(l.title || 'Sin nombre'),
-        category: CATEGORIES[l.category] ? l.category : 'routine', icon: l.icon || 'repeat',
-        amount: (l.amount === 0 || l.amount) ? Number(l.amount) : null,
-        currency: CURRENCIES[l.currency] ? l.currency : undefined, autoPay: !!l.autoPay,
-        recurrence: RECURRENCE[l.recurrence] ? l.recurrence : 'none',
-        recur: (l.recur && l.recur.unit) ? l.recur : undefined,
-        nextDate: /^\d{4}-\d{2}-\d{2}$/.test(l.nextDate) ? l.nextDate : offsetDate(7),
-        notifyDaysBefore: Number.isFinite(+l.notifyDaysBefore) ? +l.notifyDaysBefore : 3,
-        notes: String(l.notes || '').slice(0, 500),
-        history: Array.isArray(l.history) ? l.history : [],
-      }));
-      save(); render();
+      const data = JSON.parse(r.result);
+      const n = backupCount(data);
+      if (!n && !Array.isArray(data) && !(data && data.loops)) throw new Error('formato');
+      if (!confirm(`Importar ${n} Loop${n===1?'':'s'}? Esto reemplazará los datos actuales.`)) return;
+      applyBackup(data);
     } catch (err) { alert('Archivo no válido. Debe ser un respaldo .json de Loopapp.'); }
     finally { importFile.value = ''; }
   };
   r.readAsText(file);
 };
 function exportData() {
-  const blob = new Blob([JSON.stringify(loops, null, 2)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify(buildBackup(), null, 2)], { type: 'application/json' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
   a.download = `loopapp-backup-${fmtDate(todayMid())}.json`; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+function copyBackup() {
+  const text = JSON.stringify(buildBackup());
+  const done = () => alert('Respaldo copiado ✓\nGuárdalo en tus notas o envíatelo. Para restaurarlo usa “Restaurar desde texto pegado”.');
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done).catch(() => prompt('Copia este respaldo:', text));
+  else prompt('Copia este respaldo:', text);
+}
+function pasteBackup() {
+  const text = prompt('Pega aquí el texto del respaldo:');
+  if (!text) return;
+  try {
+    const data = JSON.parse(text.trim());
+    const n = backupCount(data);
+    if (!n && !(data && data.loops)) throw new Error('formato');
+    if (!confirm(`Restaurar ${n} Loop${n===1?'':'s'}? Esto reemplazará los datos actuales.`)) return;
+    applyBackup(data);
+  } catch (e) { alert('El texto no es un respaldo válido de Loopapp.'); }
 }
 
 /* ---------- Exportar al calendario (Apple / Google) ---------- */
