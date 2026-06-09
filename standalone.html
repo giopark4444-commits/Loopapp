@@ -564,15 +564,18 @@ body[data-layout="comfy"] .star-btn svg { width: 18px; height: 18px; }
 
 @media (min-width: 760px) {
   /* Toolbar en una sola línea: Pagos · Hábitos · Importantes · Buscar · Categorías */
-  .home-toolbar { flex-direction: row; flex-wrap: wrap; align-items: stretch; gap: 10px; margin: 16px 16px 8px; max-width: 1000px; }
+  .home-toolbar { flex-direction: row; flex-wrap: wrap; align-items: stretch; gap: 10px; margin: 16px 16px 10px; }
   .home-toolbar .panel-tabs { order: 1; display: flex; flex: 0 0 auto; margin: 0; gap: 8px; }
   .home-toolbar .panel-tabs button { flex: 0 0 auto; padding: 10px 16px; }
   .home-toolbar .home-filters { order: 2; flex: 1 1 300px; margin: 0; }
   .home-toolbar .home-filters .catbar { width: auto; flex: 0 0 200px; }
-  /* Una sola columna activa, como en móvil, pero centrada y con ancho cómodo */
-  .panel-cols { display: block; }
-  .panel-col .list { max-width: 760px; }
-  .panel-h { padding-top: 6px; max-width: 760px; }
+  /* Dashboard: las tres columnas (Pagos · Hábitos · Importantes) a la vez */
+  .panel-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px 24px; align-items: start; }
+  #view.searching .panel-cols { grid-template-columns: 1fr 1fr; }   /* al buscar, sin la 3ª */
+  .panel-col { display: block !important; }                          /* se muestran todas a la vez */
+  .panel-col.act { background: var(--accent-tint); border-radius: 14px; padding-bottom: 8px; }   /* resalta la pestaña activa */
+  .imp-col.act { background: rgba(245,166,35,.10); }
+  .panel-h { padding-top: 10px; }
 }
 
 /* ===========================================================
