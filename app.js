@@ -1309,10 +1309,18 @@ async function signUp(email, password) {
   return await signIn(email, password);
 }
 async function signIn(email, password) {
-  const r = await fetchTimeout(`${SB.url}/auth/v1/token?grant_type=password`, {
-    method: 'POST', headers: { 'Content-Type':'application/json', apikey: SB.anonKey },
-    body: JSON.stringify({ email, password })
-  });
+  // --- DIAGNÓSTICO TEMPORAL: avisos visibles para ver dónde falla el login ---
+  let r;
+  try {
+    r = await fetchTimeout(`${SB.url}/auth/v1/token?grant_type=password`, {
+      method: 'POST', headers: { 'Content-Type':'application/json', apikey: SB.anonKey },
+      body: JSON.stringify({ email, password })
+    });
+  } catch (e) {
+    alert('DIAGNÓSTICO 1: El servidor NO respondió.\n\nMotivo: ' + (e && e.message ? e.message : e));
+    throw e;
+  }
+  alert('DIAGNÓSTICO 2: El servidor respondió. Código: ' + r.status);
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.msg || j.error_description || j.message || 'Correo o contraseña incorrectos');
   setSession(j); return j;
