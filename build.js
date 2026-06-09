@@ -20,7 +20,7 @@ if (fs.existsSync('standalone.html')) {
 }
 if (!head) {
   // Fallback mínimo si no existe standalone anterior
-  head = `<!DOCTYPE html>\n<html lang="es">\n<head>\n  <meta charset="UTF-8" />\n  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />\n  <title>Loopapp</title>\n`;
+  head = `<!DOCTYPE html>\n<html lang="es">\n<head>\n  <meta charset="UTF-8" />\n  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />\n  <title>Loopkeeper</title>\n`;
 }
 
 // Body desde index.html (entre <body> y </body>, sin los <script src=...>)

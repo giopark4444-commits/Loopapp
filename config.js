@@ -1,4 +1,4 @@
-/* Configuración de Supabase para Loopapp (claves públicas — seguras de exponer).
+/* Configuración de Supabase para Loopkeeper (claves públicas — seguras de exponer).
    La escritura está protegida por la Edge Function + clave de edición. */
 window.LOOPAPP_SUPABASE = {
   url: "https://dhjkrrokvovlxmiuihxm.supabase.co",

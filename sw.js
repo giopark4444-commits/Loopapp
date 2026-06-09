@@ -1,4 +1,4 @@
-/* Loopapp service worker — cache simple para uso offline */
+/* Loopkeeper service worker — cache simple para uso offline */
 const CACHE = 'loopapp-v49';
 const ASSETS = [
   './',

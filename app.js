@@ -1,5 +1,5 @@
 /* ============================================================
-   Loopapp — Todo lo que se repite, a la vista
+   Loopkeeper — Todo lo que se repite, a la vista
    PWA sin dependencias. Estado en localStorage.
    ============================================================ */
 const STORE_KEY = 'loopapp.loops.v1';

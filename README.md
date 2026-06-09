@@ -1,4 +1,4 @@
-# 🔄 Loopapp — *Todo lo que se repite, a la vista*
+# 🛡️ Loopkeeper — *Todo lo que se repite, a la vista*
 
 Dashboard visual para organizar **todas tus responsabilidades recurrentes** —suscripciones, alquiler, servicios, rutinas, mantenimiento del hogar y recados— bajo una sola idea: cada cosa es un **"Loop"** con una **cuenta regresiva** y un **color según su estado**.
 
