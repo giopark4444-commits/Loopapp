@@ -473,7 +473,10 @@ function renderInicio(v) {
   const habitosCount = loops.filter(isHabito).length;
 
   const fill = () => {
-    const q = searchQuery, m = l => !q || l.title.toLowerCase().includes(q);
+    const q = searchQuery;
+    const norm = s => (s == null ? '' : String(s)).toLowerCase();
+    const m = l => !q || norm(l.title).includes(q) || norm(l.notes).includes(q) || norm((CATEGORIES[l.category]||{}).label).includes(q);
+    if (v) v.classList.toggle('searching', !!q);   // al buscar, muestra ambas columnas (no solo la pestaña activa)
     fillPanel('list-pagos', panelSort(loops.filter(l => isPago(l) && m(l))), q ? 'Sin resultados' : 'Aún no tienes pagos. Toca “Nuevo”.');
     fillPanel('list-habitos', panelSort(loops.filter(l => isHabito(l) && m(l))), q ? 'Sin resultados' : 'Aún no tienes hábitos. Toca “Nuevo”.');
   };

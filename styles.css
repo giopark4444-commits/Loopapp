@@ -494,6 +494,9 @@ body[data-layout="cards"] .row:active { background: var(--panel); }
 .panel-col .list { display: block !important; grid-template-columns: none !important; margin: 4px 6px 0; }
 /* Móvil: solo se ve la columna activa (la otra la oculta la pestaña) */
 .panel-col:not(.act) { display: none; }
+/* …salvo cuando buscas: ahí mostramos las dos columnas con sus resultados */
+#view.searching .panel-tabs { display: none; }
+#view.searching .panel-col { display: block !important; }
 
 @media (min-width: 760px) {
   .panel-tabs { display: none; }            /* en pantalla ancha no hacen falta pestañas */
