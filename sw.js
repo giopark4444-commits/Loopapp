@@ -1,5 +1,5 @@
 /* Loopapp service worker — cache simple para uso offline */
-const CACHE = 'loopapp-v33';
+const CACHE = 'loopapp-v34';
 const ASSETS = [
   './',
   './index.html',
@@ -33,15 +33,19 @@ self.addEventListener('fetch', (e) => {
   // No interceptar peticiones a otros orígenes (Supabase API, generador de QR):
   // deben ir siempre a la red para mostrar datos frescos.
   if (new URL(e.request.url).origin !== self.location.origin) return;
-  // network-first: siempre intenta traer la versión nueva del código (app.js,
-  // config.js, index.html…) y sólo cae a la caché si no hay red. Así un arreglo
-  // desplegado llega al dispositivo sin quedar atrapado en una versión vieja.
+  // stale-while-revalidate: responde AL INSTANTE desde la caché (carga fiable,
+  // nunca pantalla en negro por un titubeo de red) y, en paralelo, baja la
+  // versión nueva por detrás para la próxima vez. Si no hay nada en caché,
+  // espera a la red. Lo mejor de ambos mundos: estable y fresco.
   e.respondWith(
-    fetch(e.request).then((res) => {
-      const copy = res.clone();
-      caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
-      return res;
-    }).catch(() => caches.match(e.request))
+    caches.open(CACHE).then(async (cache) => {
+      const cached = await cache.match(e.request);
+      const network = fetch(e.request).then((res) => {
+        cache.put(e.request, res.clone()).catch(() => {});
+        return res;
+      }).catch(() => null);
+      return cached || (await network) || fetch(e.request);
+    })
   );
 });
 
