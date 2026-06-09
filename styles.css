@@ -477,22 +477,46 @@ body[data-layout="cards"] .row:active { background: var(--panel); }
 }
 
 /* ===========================================================
+   Inicio: buscador + categoría en la misma línea
+   =========================================================== */
+.home-filters { display: flex; align-items: stretch; gap: 8px; margin: 10px 16px 2px; }
+.home-filters .search-input { flex: 1 1 auto; width: auto; min-width: 0; margin: 0; }
+.home-filters .catbar { flex: 0 0 auto; width: 42%; max-width: 230px; margin: 0; }
+.home-filters .catsel { height: 100%; padding: 10px 12px; font-size: 13.5px; }
+.home-filters .catsel span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-filters .catmenu { left: auto; right: 0; min-width: 240px; }
+
+/* ===========================================================
    Inicio: Pagos / Hábitos (lado a lado en desktop, pestañas en móvil)
    =========================================================== */
 /* Estrellita de "importante" junto al título */
 .row .t .imp { display: inline-flex; vertical-align: -2px; margin-right: 4px; }
 .row .t .imp svg { width: 14px; height: 14px; color: #f5a623; fill: #f5a623; }
 
-.panel-tabs { display: flex; gap: 6px; margin: 12px 16px 4px; }
+/* Botón estrella dentro de cada loop */
+.star-btn { width: 27px; height: 27px; border-radius: 50%; border: 1.6px solid var(--line); flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center; background: var(--panel); color: var(--dim);
+  cursor: pointer; transition: color .12s ease, border-color .12s ease, background .12s ease; }
+.star-btn svg { width: 15px; height: 15px; fill: none; }
+.star-btn:hover { border-color: #f5a623; color: #f5a623; }
+.star-btn.on { border-color: #f5a623; background: rgba(245,166,35,.14); color: #f5a623; }
+.star-btn.on svg { fill: #f5a623; }
+body[data-layout="comfy"] .star-btn { width: 34px; height: 34px; }
+body[data-layout="comfy"] .star-btn svg { width: 18px; height: 18px; }
+
+.panel-tabs { display: flex; gap: 8px; margin: 14px 16px 6px; }
 .panel-tabs button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  border: 1px solid var(--line); background: var(--panel); color: var(--dim);
-  padding: 11px 7px; border-radius: 12px; font-size: 13.5px; font-weight: 700; font-family: inherit; cursor: pointer;
-  white-space: nowrap; min-width: 0; overflow: hidden; }
+  border: 1.5px solid var(--line); background: var(--panel); color: var(--dim);
+  padding: 12px 8px; border-radius: 14px; font-size: 13.5px; font-weight: 700; font-family: inherit; cursor: pointer;
+  white-space: nowrap; min-width: 0; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  transition: border-color .12s ease, background .12s ease, color .12s ease, box-shadow .12s ease; }
+.panel-tabs button:hover { border-color: var(--line2); }
 .panel-tabs button svg { width: 16px; height: 16px; flex: none; }
-.panel-tabs button.on { background: var(--accent-tint); border-color: var(--accent); color: var(--accent); }
+.panel-tabs button.on { background: var(--accent-tint); border-color: var(--accent); color: var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,.06); }
 .panel-tabs button.on svg { color: var(--accent); }
+.panel-tabs .imp-tab svg { color: #f5a623; }
 .panel-tabs .imp-tab.on { background: rgba(245,166,35,.14); border-color: #f5a623; color: #b5790a; }
-.panel-tabs .imp-tab.on svg { color: #f5a623; }
+.panel-tabs .imp-tab.on svg { color: #f5a623; fill: #f5a623; }
 .panel-tabs .pt-c { font-size: 12px; font-weight: 800; background: var(--bg); border-radius: 999px; padding: 1px 8px; flex: none; }
 .imp-col .panel-h svg { color: #f5a623; }
 .panel-h { display: flex; align-items: center; gap: 8px; font-family: var(--serif); font-size: 17px; font-weight: 600; padding: 10px 20px 2px; }

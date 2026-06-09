@@ -491,6 +491,70 @@ body[data-layout="cards"] .row:active { background: var(--panel); }
 }
 
 /* ===========================================================
+   Inicio: buscador + categoría en la misma línea
+   =========================================================== */
+.home-filters { display: flex; align-items: stretch; gap: 8px; margin: 10px 16px 2px; }
+.home-filters .search-input { flex: 1 1 auto; width: auto; min-width: 0; margin: 0; }
+.home-filters .catbar { flex: 0 0 auto; width: 42%; max-width: 230px; margin: 0; }
+.home-filters .catsel { height: 100%; padding: 10px 12px; font-size: 13.5px; }
+.home-filters .catsel span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-filters .catmenu { left: auto; right: 0; min-width: 240px; }
+
+/* ===========================================================
+   Inicio: Pagos / Hábitos (lado a lado en desktop, pestañas en móvil)
+   =========================================================== */
+/* Estrellita de "importante" junto al título */
+.row .t .imp { display: inline-flex; vertical-align: -2px; margin-right: 4px; }
+.row .t .imp svg { width: 14px; height: 14px; color: #f5a623; fill: #f5a623; }
+
+/* Botón estrella dentro de cada loop */
+.star-btn { width: 27px; height: 27px; border-radius: 50%; border: 1.6px solid var(--line); flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center; background: var(--panel); color: var(--dim);
+  cursor: pointer; transition: color .12s ease, border-color .12s ease, background .12s ease; }
+.star-btn svg { width: 15px; height: 15px; fill: none; }
+.star-btn:hover { border-color: #f5a623; color: #f5a623; }
+.star-btn.on { border-color: #f5a623; background: rgba(245,166,35,.14); color: #f5a623; }
+.star-btn.on svg { fill: #f5a623; }
+body[data-layout="comfy"] .star-btn { width: 34px; height: 34px; }
+body[data-layout="comfy"] .star-btn svg { width: 18px; height: 18px; }
+
+.panel-tabs { display: flex; gap: 8px; margin: 14px 16px 6px; }
+.panel-tabs button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border: 1.5px solid var(--line); background: var(--panel); color: var(--dim);
+  padding: 12px 8px; border-radius: 14px; font-size: 13.5px; font-weight: 700; font-family: inherit; cursor: pointer;
+  white-space: nowrap; min-width: 0; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  transition: border-color .12s ease, background .12s ease, color .12s ease, box-shadow .12s ease; }
+.panel-tabs button:hover { border-color: var(--line2); }
+.panel-tabs button svg { width: 16px; height: 16px; flex: none; }
+.panel-tabs button.on { background: var(--accent-tint); border-color: var(--accent); color: var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+.panel-tabs button.on svg { color: var(--accent); }
+.panel-tabs .imp-tab svg { color: #f5a623; }
+.panel-tabs .imp-tab.on { background: rgba(245,166,35,.14); border-color: #f5a623; color: #b5790a; }
+.panel-tabs .imp-tab.on svg { color: #f5a623; fill: #f5a623; }
+.panel-tabs .pt-c { font-size: 12px; font-weight: 800; background: var(--bg); border-radius: 999px; padding: 1px 8px; flex: none; }
+.imp-col .panel-h svg { color: #f5a623; }
+.panel-h { display: flex; align-items: center; gap: 8px; font-family: var(--serif); font-size: 17px; font-weight: 600; padding: 10px 20px 2px; }
+.panel-h svg { width: 18px; height: 18px; color: var(--accent); }
+.panel-h span { margin-left: auto; font-family: var(--sans); font-size: 12.5px; font-weight: 700; color: var(--dim); }
+/* Listas dentro de los paneles: siempre una sola columna */
+.panel-col .list { display: block !important; grid-template-columns: none !important; margin: 4px 6px 0; }
+/* Móvil: solo se ve la columna activa (la otra la oculta la pestaña) */
+.panel-col:not(.act) { display: none; }
+/* …salvo cuando buscas: ahí mostramos Pagos y Hábitos con sus resultados */
+#view.searching .panel-tabs { display: none; }
+#view.searching .panel-col { display: block !important; }
+#view.searching .imp-col { display: none !important; }   /* al buscar no mostramos la vista (duplicada) de importantes */
+
+@media (min-width: 760px) {
+  .panel-tabs { display: none; }            /* en pantalla ancha no hacen falta pestañas */
+  .panel-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; align-items: start; }
+  .panel-cols.has-imp { grid-template-columns: 1fr 1fr 1fr; }   /* con importantes, tres columnas */
+  #view.searching .panel-cols.has-imp { grid-template-columns: 1fr 1fr; }  /* al buscar, sin la 3ª */
+  .panel-col { display: block !important; } /* se muestran las columnas a la vez */
+  .panel-h { padding-top: 4px; }
+}
+
+/* ===========================================================
    Pantalla de autenticación
    =========================================================== */
 #auth-screen {
@@ -499,6 +563,7 @@ body[data-layout="cards"] .row:active { background: var(--panel); }
   display: flex; align-items: center; justify-content: center;
   padding: 24px 16px;
 }
+#auth-screen[hidden] { display: none; }
 .auth-box {
   width: 100%; max-width: 400px;
   background: var(--panel);
@@ -806,6 +871,7 @@ const ICONS = ['star','credit-card','landmark','wallet','tv','music','cloud','sm
 /* ---------- Estado de la app ---------- */
 let loops = load();
 let activeSection = pref('ui.section', 'inicio');
+let panelTab = pref('ui.panel', 'pagos');  // pagos | habitos (pestaña en móvil)
 let payFilter = pref('ui.pay', 'all');   // all | manual | auto | free
 let activeCategory = pref('ui.cat', 'all');
 let searchQuery = '';
@@ -1102,6 +1168,24 @@ function visibleLoops() {
     return daysUntil(a.nextDate) - daysUntil(b.nextDate);
   });
 }
+/* Orden por prioridad (vencidos/urgentes primero, luego por fecha) */
+function panelSort(list) {
+  return list.sort((a,b) => {
+    const sa = STATES[statusOf(a)].order, sb = STATES[statusOf(b)].order;
+    if (sa !== sb) return sa - sb;
+    return daysUntil(a.nextDate) - daysUntil(b.nextDate);
+  });
+}
+/* Rellena una columna (Pagos o Hábitos) con sus filas */
+function fillPanel(contId, list, emptyMsg) {
+  const cont = document.getElementById(contId); if (!cont) return;
+  if (!list.length) {
+    cont.innerHTML = `<div class="empty"><div class="em">${svg('repeat')}</div><p>${emptyMsg}</p></div>`;
+    return;
+  }
+  cont.innerHTML = list.map(rowHTML).join('');
+  bindRows(cont);
+}
 function renderInicio(v) {
   if (!loops.length) {
     v.innerHTML = `<div class="welcome">
@@ -1119,37 +1203,75 @@ function renderInicio(v) {
   const overdue = loops.filter(l => statusOf(l)==='overdue').length;
   const urgent = loops.filter(l => statusOf(l)==='urgent').length;
   const monthly = loops.filter(l => (l.currency||def)===def).reduce((s,l) => s + monthlyCost(l), 0);
-  const manuales = loops.filter(l => payType(l) === 'manual').length;
-  const seg = (k,t) => `<button class="${payFilter===k?'on':''}" data-pay="${k}">${t}</button>`;
+  const isPago = l => payType(l) !== 'task';
+  const isHabito = l => payType(l) === 'task';
+  const pagosCount = loops.filter(isPago).length;
+  const habitosCount = loops.filter(isHabito).length;
+  const importantCount = loops.filter(l => l.important).length;
+
+  // Selector de categorías (junto al buscador): filtra las tres columnas
   const curCat = activeCategory === 'all' ? { label:'Todas las categorías', icon:'list' } : (CATEGORIES[activeCategory] || { label:'Todas las categorías', icon:'list' });
-  const catOpt = (key,label,icon) => `<button class="catopt ${activeCategory===key?'on':''}" data-cat="${key}">${svg(icon)} ${label}</button>`;
+  const catOpt = (key,label,icon) => `<button class="catopt ${activeCategory===key?'on':''}" data-cat="${key}">${svg(icon)} ${escapeHtml(label)}</button>`;
   let catMenu = catOpt('all','Todas las categorías','list');
   Object.keys(CATEGORIES).forEach(k => { catMenu += catOpt(k, CATEGORIES[k].label, CATEGORIES[k].icon); });
+
+  const fill = () => {
+    const q = searchQuery;
+    const norm = s => (s == null ? '' : String(s)).toLowerCase();
+    const inCat = l => activeCategory === 'all' || l.category === activeCategory;
+    const m = l => inCat(l) && (!q || norm(l.title).includes(q) || norm(l.notes).includes(q) || norm((CATEGORIES[l.category]||{}).label).includes(q));
+    // al buscar, mostramos Pagos y Hábitos a la vez (no solo la pestaña activa)
+    if (v) v.classList.toggle('searching', !!q);
+    const empty = (activeCategory !== 'all' && !q) ? 'Nada en esta categoría.' : (q ? 'Sin resultados' : null);
+    fillPanel('list-pagos', panelSort(loops.filter(l => isPago(l) && m(l))), empty || 'Aún no tienes pagos. Toca “Nuevo”.');
+    fillPanel('list-habitos', panelSort(loops.filter(l => isHabito(l) && m(l))), empty || 'Aún no tienes hábitos. Toca “Nuevo”.');
+    fillPanel('list-importantes', panelSort(loops.filter(l => l.important && m(l))), empty || 'Toca la ⭐ de cualquier loop para marcarlo como importante y verlo aquí.');
+  };
 
   v.innerHTML = `
     <div class="sum">
       ${overdue ? `<span class="red">● ${overdue} vencido${overdue>1?'s':''}</span>` : ''}
       ${urgent ? `<span>● ${urgent} urgente${urgent>1?'s':''}</span>` : ''}
       <span><b>${money0(monthly, def)}</b> / mes</span>
-      <span><b>${manuales}</b> manuales</span>
     </div>
-    <div class="filters">
+    <div class="home-filters">
+      <input id="search" class="search-input" type="search" placeholder="Buscar…" autocomplete="off" value="${escapeAttr(searchQuery)}" />
       <div class="catbar">
-        <button class="catsel" id="catsel" aria-haspopup="true">${svg(curCat.icon)}<span>${curCat.label}</span>${svg('chevron-down')}</button>
+        <button class="catsel" id="catsel" aria-haspopup="true">${svg(curCat.icon)}<span>${escapeHtml(curCat.label)}</span>${svg('chevron-down')}</button>
         <div class="catmenu" id="catmenu" hidden>${catMenu}</div>
       </div>
-      <div class="seg">${seg('all','Todos')}${seg('manual','Manuales')}${seg('auto','Automáticos')}${seg('free','Gratis')}</div>
-      <input id="search" class="search-input" type="search" placeholder="Buscar Loop…" autocomplete="off" value="${escapeAttr(searchQuery)}" />
     </div>
-    <div class="list" id="list"></div>`;
+    <div class="panel-tabs">
+      <button data-ptab="pagos" class="${panelTab==='pagos'?'on':''}">${svg('wallet')} Pagos <span class="pt-c">${pagosCount}</span></button>
+      <button data-ptab="habitos" class="${panelTab==='habitos'?'on':''}">${svg('checksq')} Hábitos <span class="pt-c">${habitosCount}</span></button>
+      <button data-ptab="importantes" class="imp-tab ${panelTab==='importantes'?'on':''}">${svg('star')} Importantes <span class="pt-c">${importantCount}</span></button>
+    </div>
+    <div class="panel-cols has-imp">
+      <section class="panel-col ${panelTab==='pagos'?'act':''}" data-col="pagos">
+        <h3 class="panel-h">${svg('wallet')} Pagos <span>${money0(monthly, def)}/mes</span></h3>
+        <div class="list" id="list-pagos"></div>
+      </section>
+      <section class="panel-col ${panelTab==='habitos'?'act':''}" data-col="habitos">
+        <h3 class="panel-h">${svg('checksq')} Hábitos</h3>
+        <div class="list" id="list-habitos"></div>
+      </section>
+      <section class="panel-col imp-col ${panelTab==='importantes'?'act':''}" data-col="importantes">
+        <h3 class="panel-h">${svg('star')} Importantes <span>${importantCount}</span></h3>
+        <div class="list" id="list-importantes"></div>
+      </section>
+    </div>`;
 
+  fill();
+  const s = v.querySelector('#search');
+  s.oninput = (e) => { searchQuery = e.target.value.trim().toLowerCase(); fill(); };
   const catsel = v.querySelector('#catsel'), catmenu = v.querySelector('#catmenu');
   catsel.onclick = (e) => { e.stopPropagation(); catmenu.hidden = !catmenu.hidden; };
   catmenu.querySelectorAll('.catopt').forEach(b => b.onclick = () => { activeCategory = b.dataset.cat; setPref('ui.cat', activeCategory); render(); });
-  v.querySelectorAll('.seg button').forEach(b => b.onclick = () => { payFilter = b.dataset.pay; setPref('ui.pay', payFilter); render(); });
-  const s = v.querySelector('#search');
-  s.oninput = (e) => { searchQuery = e.target.value.trim().toLowerCase(); renderList(); };
-  renderList();
+  v.querySelectorAll('.panel-tabs button').forEach(b => b.onclick = () => {
+    panelTab = b.dataset.ptab; setPref('ui.panel', panelTab);
+    v.querySelectorAll('.panel-tabs button').forEach(x => x.classList.toggle('on', x.dataset.ptab === panelTab));
+    v.querySelectorAll('.panel-col').forEach(c => c.classList.toggle('act', c.dataset.col === panelTab));
+  });
 }
 function renderList() {
   const cont = document.getElementById('list'); if (!cont) return;
@@ -1163,10 +1285,16 @@ function renderList() {
   cont.innerHTML = list.map(rowHTML).join('');
   cont.querySelectorAll('.row').forEach(r => {
     const id = r.dataset.id;
-    r.onclick = (e) => { if (!e.target.closest('.chk')) openForm(loops.find(l => l.id === id)); };
+    r.onclick = (e) => { if (!e.target.closest('.chk') && !e.target.closest('.star-btn')) openForm(loops.find(l => l.id === id)); };
     const chk = r.querySelector('.chk');
     if (chk) chk.onclick = () => markDone(id);
+    const star = r.querySelector('.star-btn');
+    if (star) star.onclick = (e) => { e.stopPropagation(); toggleImportant(id); };
   });
+}
+function toggleImportant(id) {
+  const l = loops.find(x => x.id === id); if (!l) return;
+  l.important = !l.important; save(); render();
 }
 function rowHTML(loop) {
   const st = STATES[statusOf(loop)];
@@ -1188,13 +1316,14 @@ function rowHTML(loop) {
           <div class="cd">${cd.big}</div>
           <div class="cl">${cd.cl}</div>
         </div>
+        <button class="star-btn ${loop.important ? 'on' : ''}" title="${loop.important ? 'Quitar de importantes' : 'Marcar como importante'}" aria-pressed="${loop.important ? 'true' : 'false'}">${svg('star')}</button>
         <button class="chk" title="Marcar ${loop.amount ? 'pagado' : 'hecho'}">${svg('check')}</button>
       </div>
       <div class="rowbar"><i style="width:${cd.pct}%"></i></div>
     </div>`;
 }
 function tickCountdowns() {
-  document.querySelectorAll('#list .row').forEach(r => {
+  document.querySelectorAll('.row[data-id]').forEach(r => {
     const loop = loops.find(l => l.id === r.dataset.id); if (!loop) return;
     const cd = cdParts(loop);
     const num = r.querySelector('.cd'), lab = r.querySelector('.cl'), bar = r.querySelector('.rowbar > i');
@@ -1209,8 +1338,9 @@ const SORTS = { priority:'Importancia', date:'Próxima fecha', price:'Precio', i
 function bindRows(scope) {
   scope.querySelectorAll('.row[data-id]').forEach(r => {
     const id = r.dataset.id;
-    r.onclick = (e) => { if (!e.target.closest('.chk')) openForm(loops.find(l => l.id === id)); };
+    r.onclick = (e) => { if (!e.target.closest('.chk') && !e.target.closest('.star-btn')) openForm(loops.find(l => l.id === id)); };
     const chk = r.querySelector('.chk'); if (chk) chk.onclick = () => markDone(id);
+    const star = r.querySelector('.star-btn'); if (star) star.onclick = (e) => { e.stopPropagation(); toggleImportant(id); };
   });
 }
 function sortLoops(list) {
@@ -1589,6 +1719,10 @@ function openForm(loop, opts) {
       <div><div class="tl">Pago automático</div><div class="ts">Se cobra solo; no tienes que pagarlo a mano.</div></div>
       <button type="button" class="switch ${data.autoPay?'on':''}" id="f-auto" aria-label="Pago automático"></button>
     </div></div>
+    <div class="field"><div class="toggle-row">
+      <div><div class="tl">⭐ Importante</div><div class="ts">Sube al inicio de su lista y aparece en “Solo importantes”.</div></div>
+      <button type="button" class="switch ${data.important?'on':''}" id="f-imp" aria-label="Importante"></button>
+    </div></div>
     <div class="field-row">
       <div class="field"><label>Próxima fecha</label><input id="f-date" type="date" value="${data.nextDate}" /></div>
       <div class="field"><label>Avisar (días antes)</label><input id="f-notify" type="number" min="0" max="60" value="${data.notifyDaysBefore ?? 3}" /></div>
@@ -1607,13 +1741,15 @@ function openForm(loop, opts) {
       <button class="btn btn-primary" id="f-save">${isEdit ? 'Guardar' : 'Agregar'}</button>
     </div>`;
   overlay.hidden = false;
-  let sel = { category: data.category, icon: data.icon, autoPay: !!data.autoPay };
+  let sel = { category: data.category, icon: data.icon, autoPay: !!data.autoPay, important: !!data.important };
   modal.querySelectorAll('#cat-picker button').forEach(b => b.onclick = () => {
     sel.category = b.dataset.cat; modal.querySelectorAll('#cat-picker button').forEach(x => x.classList.remove('sel')); b.classList.add('sel'); });
   modal.querySelectorAll('#icon-picker button').forEach(b => b.onclick = () => {
     sel.icon = b.dataset.icon; modal.querySelectorAll('#icon-picker button').forEach(x => x.classList.remove('sel')); b.classList.add('sel'); });
   const sw = modal.querySelector('#f-auto');
   sw.onclick = () => { sel.autoPay = !sel.autoPay; sw.classList.toggle('on', sel.autoPay); };
+  const swImp = modal.querySelector('#f-imp');
+  swImp.onclick = () => { sel.important = !sel.important; swImp.classList.toggle('on', sel.important); };
   const recN = modal.querySelector('#f-rec-n'), recU = modal.querySelector('#f-rec-unit'), recH = modal.querySelector('#rec-hint');
   function updRec() {
     recN.style.display = recU.value === 'none' ? 'none' : '';
@@ -1642,7 +1778,7 @@ function openForm(loop, opts) {
       amount: amountRaw === '' ? null : parseFloat(amountRaw), currency: modal.querySelector('#f-cur').value, autoPay: sel.autoPay,
       recur: ruv === 'none' ? { unit: 'none' } : { n: rnv, unit: ruv }, nextDate: modal.querySelector('#f-date').value,
       notifyDaysBefore: parseInt(modal.querySelector('#f-notify').value, 10) || 0,
-      notes: modal.querySelector('#f-notes').value.trim(),
+      notes: modal.querySelector('#f-notes').value.trim(), important: sel.important,
     });
     close();
   };
@@ -1954,9 +2090,23 @@ function sbHeaders() {
 }
 
 /* -- Registro / Login / Logout -- */
+// fetch con tiempo límite: si la red se cuelga, lanza un error claro en vez de
+// dejar el botón "…" girando para siempre. (AbortController = corta la petición.)
+async function fetchTimeout(url, opts = {}, ms = 15000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { ...opts, signal: ctrl.signal });
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('Sin respuesta del servidor. Revisa tu conexión y reintenta.');
+    throw new Error('No se pudo conectar. Revisa tu conexión y reintenta.');
+  } finally {
+    clearTimeout(t);
+  }
+}
 async function signUp(email, password) {
   // Crea la cuenta ya confirmada vía edge function (registro instantáneo)
-  const r = await fetch(`${SB.url}/functions/v1/auth-signup`, {
+  const r = await fetchTimeout(`${SB.url}/functions/v1/auth-signup`, {
     method: 'POST', headers: { 'Content-Type':'application/json', apikey: SB.anonKey },
     body: JSON.stringify({ email, password })
   });
@@ -1966,11 +2116,11 @@ async function signUp(email, password) {
   return await signIn(email, password);
 }
 async function signIn(email, password) {
-  const r = await fetch(`${SB.url}/auth/v1/token?grant_type=password`, {
+  const r = await fetchTimeout(`${SB.url}/auth/v1/token?grant_type=password`, {
     method: 'POST', headers: { 'Content-Type':'application/json', apikey: SB.anonKey },
     body: JSON.stringify({ email, password })
   });
-  const j = await r.json();
+  const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.msg || j.error_description || j.message || 'Correo o contraseña incorrectos');
   setSession(j); return j;
 }
@@ -2286,7 +2436,17 @@ let deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; });
 
 /* Service worker */
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+  // Cuando una versión nueva toma el control, recarga una vez para mostrar lo último
+  // (evita el clásico "no se ven los cambios" hasta recargar dos veces).
+  let swReloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (swReloaded) return;
+    swReloaded = true;
+    location.reload();
+  });
+}
 
 /* ---------- Pantalla de auth ---------- */
 function showAuthScreen(tab) {

@@ -472,7 +472,6 @@ function renderInicio(v) {
   const pagosCount = loops.filter(isPago).length;
   const habitosCount = loops.filter(isHabito).length;
   const importantCount = loops.filter(l => l.important).length;
-  if (!importantCount && panelTab === 'importantes') panelTab = 'pagos';   // sin importantes, no dejes esa pestaña activa
 
   // Selector de categorías (junto al buscador): filtra las tres columnas
   const curCat = activeCategory === 'all' ? { label:'Todas las categorías', icon:'list' } : (CATEGORIES[activeCategory] || { label:'Todas las categorías', icon:'list' });
@@ -490,7 +489,7 @@ function renderInicio(v) {
     const empty = (activeCategory !== 'all' && !q) ? 'Nada en esta categoría.' : (q ? 'Sin resultados' : null);
     fillPanel('list-pagos', panelSort(loops.filter(l => isPago(l) && m(l))), empty || 'Aún no tienes pagos. Toca “Nuevo”.');
     fillPanel('list-habitos', panelSort(loops.filter(l => isHabito(l) && m(l))), empty || 'Aún no tienes hábitos. Toca “Nuevo”.');
-    if (importantCount) fillPanel('list-importantes', panelSort(loops.filter(l => l.important && m(l))), empty || 'Marca un loop con ⭐ para verlo aquí.');
+    fillPanel('list-importantes', panelSort(loops.filter(l => l.important && m(l))), empty || 'Toca la ⭐ de cualquier loop para marcarlo como importante y verlo aquí.');
   };
 
   v.innerHTML = `
@@ -499,17 +498,19 @@ function renderInicio(v) {
       ${urgent ? `<span>● ${urgent} urgente${urgent>1?'s':''}</span>` : ''}
       <span><b>${money0(monthly, def)}</b> / mes</span>
     </div>
-    <input id="search" class="search-input" type="search" placeholder="Buscar…" autocomplete="off" value="${escapeAttr(searchQuery)}" />
-    <div class="catbar">
-      <button class="catsel" id="catsel" aria-haspopup="true">${svg(curCat.icon)}<span>${escapeHtml(curCat.label)}</span>${svg('chevron-down')}</button>
-      <div class="catmenu" id="catmenu" hidden>${catMenu}</div>
+    <div class="home-filters">
+      <input id="search" class="search-input" type="search" placeholder="Buscar…" autocomplete="off" value="${escapeAttr(searchQuery)}" />
+      <div class="catbar">
+        <button class="catsel" id="catsel" aria-haspopup="true">${svg(curCat.icon)}<span>${escapeHtml(curCat.label)}</span>${svg('chevron-down')}</button>
+        <div class="catmenu" id="catmenu" hidden>${catMenu}</div>
+      </div>
     </div>
     <div class="panel-tabs">
       <button data-ptab="pagos" class="${panelTab==='pagos'?'on':''}">${svg('wallet')} Pagos <span class="pt-c">${pagosCount}</span></button>
       <button data-ptab="habitos" class="${panelTab==='habitos'?'on':''}">${svg('checksq')} Hábitos <span class="pt-c">${habitosCount}</span></button>
-      ${importantCount ? `<button data-ptab="importantes" class="imp-tab ${panelTab==='importantes'?'on':''}">${svg('star')} Importantes <span class="pt-c">${importantCount}</span></button>` : ''}
+      <button data-ptab="importantes" class="imp-tab ${panelTab==='importantes'?'on':''}">${svg('star')} Importantes <span class="pt-c">${importantCount}</span></button>
     </div>
-    <div class="panel-cols${importantCount ? ' has-imp' : ''}">
+    <div class="panel-cols has-imp">
       <section class="panel-col ${panelTab==='pagos'?'act':''}" data-col="pagos">
         <h3 class="panel-h">${svg('wallet')} Pagos <span>${money0(monthly, def)}/mes</span></h3>
         <div class="list" id="list-pagos"></div>
@@ -518,10 +519,10 @@ function renderInicio(v) {
         <h3 class="panel-h">${svg('checksq')} Hábitos</h3>
         <div class="list" id="list-habitos"></div>
       </section>
-      ${importantCount ? `<section class="panel-col imp-col ${panelTab==='importantes'?'act':''}" data-col="importantes">
+      <section class="panel-col imp-col ${panelTab==='importantes'?'act':''}" data-col="importantes">
         <h3 class="panel-h">${svg('star')} Importantes <span>${importantCount}</span></h3>
         <div class="list" id="list-importantes"></div>
-      </section>` : ''}
+      </section>
     </div>`;
 
   fill();
@@ -548,10 +549,16 @@ function renderList() {
   cont.innerHTML = list.map(rowHTML).join('');
   cont.querySelectorAll('.row').forEach(r => {
     const id = r.dataset.id;
-    r.onclick = (e) => { if (!e.target.closest('.chk')) openForm(loops.find(l => l.id === id)); };
+    r.onclick = (e) => { if (!e.target.closest('.chk') && !e.target.closest('.star-btn')) openForm(loops.find(l => l.id === id)); };
     const chk = r.querySelector('.chk');
     if (chk) chk.onclick = () => markDone(id);
+    const star = r.querySelector('.star-btn');
+    if (star) star.onclick = (e) => { e.stopPropagation(); toggleImportant(id); };
   });
+}
+function toggleImportant(id) {
+  const l = loops.find(x => x.id === id); if (!l) return;
+  l.important = !l.important; save(); render();
 }
 function rowHTML(loop) {
   const st = STATES[statusOf(loop)];
@@ -565,7 +572,7 @@ function rowHTML(loop) {
       <div class="row-top">
         <span class="ic">${renderIcon(loop.icon || cat.icon)}</span>
         <div class="mid">
-          <div class="t">${loop.important ? `<span class="imp" title="Importante">${svg('star')}</span>` : ''}${escapeHtml(loop.title)}</div>
+          <div class="t">${escapeHtml(loop.title)}</div>
           <div class="m">${meta}</div>
           ${loop.notes ? `<div class="note">${escapeHtml(loop.notes)}</div>` : ''}
         </div>
@@ -573,6 +580,7 @@ function rowHTML(loop) {
           <div class="cd">${cd.big}</div>
           <div class="cl">${cd.cl}</div>
         </div>
+        <button class="star-btn ${loop.important ? 'on' : ''}" title="${loop.important ? 'Quitar de importantes' : 'Marcar como importante'}" aria-pressed="${loop.important ? 'true' : 'false'}">${svg('star')}</button>
         <button class="chk" title="Marcar ${loop.amount ? 'pagado' : 'hecho'}">${svg('check')}</button>
       </div>
       <div class="rowbar"><i style="width:${cd.pct}%"></i></div>
@@ -594,8 +602,9 @@ const SORTS = { priority:'Importancia', date:'Próxima fecha', price:'Precio', i
 function bindRows(scope) {
   scope.querySelectorAll('.row[data-id]').forEach(r => {
     const id = r.dataset.id;
-    r.onclick = (e) => { if (!e.target.closest('.chk')) openForm(loops.find(l => l.id === id)); };
+    r.onclick = (e) => { if (!e.target.closest('.chk') && !e.target.closest('.star-btn')) openForm(loops.find(l => l.id === id)); };
     const chk = r.querySelector('.chk'); if (chk) chk.onclick = () => markDone(id);
+    const star = r.querySelector('.star-btn'); if (star) star.onclick = (e) => { e.stopPropagation(); toggleImportant(id); };
   });
 }
 function sortLoops(list) {
