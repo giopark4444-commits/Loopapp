@@ -1283,9 +1283,23 @@ function sbHeaders() {
 }
 
 /* -- Registro / Login / Logout -- */
+// fetch con tiempo límite: si la red se cuelga, lanza un error claro en vez de
+// dejar el botón "…" girando para siempre. (AbortController = corta la petición.)
+async function fetchTimeout(url, opts = {}, ms = 15000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { ...opts, signal: ctrl.signal });
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('Sin respuesta del servidor. Revisa tu conexión y reintenta.');
+    throw new Error('No se pudo conectar. Revisa tu conexión y reintenta.');
+  } finally {
+    clearTimeout(t);
+  }
+}
 async function signUp(email, password) {
   // Crea la cuenta ya confirmada vía edge function (registro instantáneo)
-  const r = await fetch(`${SB.url}/functions/v1/auth-signup`, {
+  const r = await fetchTimeout(`${SB.url}/functions/v1/auth-signup`, {
     method: 'POST', headers: { 'Content-Type':'application/json', apikey: SB.anonKey },
     body: JSON.stringify({ email, password })
   });
@@ -1295,11 +1309,11 @@ async function signUp(email, password) {
   return await signIn(email, password);
 }
 async function signIn(email, password) {
-  const r = await fetch(`${SB.url}/auth/v1/token?grant_type=password`, {
+  const r = await fetchTimeout(`${SB.url}/auth/v1/token?grant_type=password`, {
     method: 'POST', headers: { 'Content-Type':'application/json', apikey: SB.anonKey },
     body: JSON.stringify({ email, password })
   });
-  const j = await r.json();
+  const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.msg || j.error_description || j.message || 'Correo o contraseña incorrectos');
   setSession(j); return j;
 }
