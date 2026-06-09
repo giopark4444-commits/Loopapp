@@ -485,6 +485,7 @@ body[data-layout="cards"] .row:active { background: var(--panel); }
   display: flex; align-items: center; justify-content: center;
   padding: 24px 16px;
 }
+#auth-screen[hidden] { display: none; }
 .auth-box {
   width: 100%; max-width: 400px;
   background: var(--panel);

@@ -1309,26 +1309,13 @@ async function signUp(email, password) {
   return await signIn(email, password);
 }
 async function signIn(email, password) {
-  // --- DIAGNÓSTICO TEMPORAL: avisos visibles para ver dónde falla el login ---
-  let r;
-  try {
-    r = await fetchTimeout(`${SB.url}/auth/v1/token?grant_type=password`, {
-      method: 'POST', headers: { 'Content-Type':'application/json', apikey: SB.anonKey },
-      body: JSON.stringify({ email, password })
-    });
-  } catch (e) {
-    alert('DIAGNÓSTICO 1: El servidor NO respondió.\n\nMotivo: ' + (e && e.message ? e.message : e));
-    throw e;
-  }
-  alert('DIAGNÓSTICO 2: El servidor respondió. Código: ' + r.status);
-  const txt = await r.text();
-  alert('DIAGNÓSTICO 3: Cuerpo leído. Largo: ' + txt.length);
-  let j = {};
-  try { j = JSON.parse(txt); } catch (e) {}
+  const r = await fetchTimeout(`${SB.url}/auth/v1/token?grant_type=password`, {
+    method: 'POST', headers: { 'Content-Type':'application/json', apikey: SB.anonKey },
+    body: JSON.stringify({ email, password })
+  });
+  const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.msg || j.error_description || j.message || 'Correo o contraseña incorrectos');
-  setSession(j);
-  alert('DIAGNÓSTICO 4: Sesión guardada. ¿Token? ' + (j.access_token ? 'SÍ' : 'NO'));
-  return j;
+  setSession(j); return j;
 }
 async function signOut() {
   const tok = getSession()?.access_token;
@@ -1694,12 +1681,9 @@ function renderAuthScreen(tab) {
   scr.querySelector('#auth-pwd').addEventListener('keydown', e => { if (e.key==='Enter') scr.querySelector('#auth-submit').click(); });
 }
 async function onAuthSuccess() {
-  alert('DIAGNÓSTICO 5: Entrando a la app…');
   hideAuthScreen();
-  alert('DIAGNÓSTICO 6: Pantalla de login ocultada.');
   await loadPlan();
   await syncDown();
-  alert('DIAGNÓSTICO 7: Datos sincronizados. ¡Listo!');
   render();
   checkDue();
 }
