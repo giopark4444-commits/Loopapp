@@ -474,15 +474,23 @@ function renderInicio(v) {
   const importantCount = loops.filter(l => l.important).length;
   if (!importantCount && panelTab === 'importantes') panelTab = 'pagos';   // sin importantes, no dejes esa pestaña activa
 
+  // Selector de categorías (junto al buscador): filtra las tres columnas
+  const curCat = activeCategory === 'all' ? { label:'Todas las categorías', icon:'list' } : (CATEGORIES[activeCategory] || { label:'Todas las categorías', icon:'list' });
+  const catOpt = (key,label,icon) => `<button class="catopt ${activeCategory===key?'on':''}" data-cat="${key}">${svg(icon)} ${escapeHtml(label)}</button>`;
+  let catMenu = catOpt('all','Todas las categorías','list');
+  Object.keys(CATEGORIES).forEach(k => { catMenu += catOpt(k, CATEGORIES[k].label, CATEGORIES[k].icon); });
+
   const fill = () => {
     const q = searchQuery;
     const norm = s => (s == null ? '' : String(s)).toLowerCase();
-    const m = l => !q || norm(l.title).includes(q) || norm(l.notes).includes(q) || norm((CATEGORIES[l.category]||{}).label).includes(q);
+    const inCat = l => activeCategory === 'all' || l.category === activeCategory;
+    const m = l => inCat(l) && (!q || norm(l.title).includes(q) || norm(l.notes).includes(q) || norm((CATEGORIES[l.category]||{}).label).includes(q));
     // al buscar, mostramos Pagos y Hábitos a la vez (no solo la pestaña activa)
     if (v) v.classList.toggle('searching', !!q);
-    fillPanel('list-pagos', panelSort(loops.filter(l => isPago(l) && m(l))), q ? 'Sin resultados' : 'Aún no tienes pagos. Toca “Nuevo”.');
-    fillPanel('list-habitos', panelSort(loops.filter(l => isHabito(l) && m(l))), q ? 'Sin resultados' : 'Aún no tienes hábitos. Toca “Nuevo”.');
-    if (importantCount) fillPanel('list-importantes', panelSort(loops.filter(l => l.important && m(l))), q ? 'Sin resultados' : 'Marca un loop con ⭐ para verlo aquí.');
+    const empty = (activeCategory !== 'all' && !q) ? 'Nada en esta categoría.' : (q ? 'Sin resultados' : null);
+    fillPanel('list-pagos', panelSort(loops.filter(l => isPago(l) && m(l))), empty || 'Aún no tienes pagos. Toca “Nuevo”.');
+    fillPanel('list-habitos', panelSort(loops.filter(l => isHabito(l) && m(l))), empty || 'Aún no tienes hábitos. Toca “Nuevo”.');
+    if (importantCount) fillPanel('list-importantes', panelSort(loops.filter(l => l.important && m(l))), empty || 'Marca un loop con ⭐ para verlo aquí.');
   };
 
   v.innerHTML = `
@@ -492,6 +500,10 @@ function renderInicio(v) {
       <span><b>${money0(monthly, def)}</b> / mes</span>
     </div>
     <input id="search" class="search-input" type="search" placeholder="Buscar…" autocomplete="off" value="${escapeAttr(searchQuery)}" />
+    <div class="catbar">
+      <button class="catsel" id="catsel" aria-haspopup="true">${svg(curCat.icon)}<span>${escapeHtml(curCat.label)}</span>${svg('chevron-down')}</button>
+      <div class="catmenu" id="catmenu" hidden>${catMenu}</div>
+    </div>
     <div class="panel-tabs">
       <button data-ptab="pagos" class="${panelTab==='pagos'?'on':''}">${svg('wallet')} Pagos <span class="pt-c">${pagosCount}</span></button>
       <button data-ptab="habitos" class="${panelTab==='habitos'?'on':''}">${svg('checksq')} Hábitos <span class="pt-c">${habitosCount}</span></button>
@@ -515,6 +527,9 @@ function renderInicio(v) {
   fill();
   const s = v.querySelector('#search');
   s.oninput = (e) => { searchQuery = e.target.value.trim().toLowerCase(); fill(); };
+  const catsel = v.querySelector('#catsel'), catmenu = v.querySelector('#catmenu');
+  catsel.onclick = (e) => { e.stopPropagation(); catmenu.hidden = !catmenu.hidden; };
+  catmenu.querySelectorAll('.catopt').forEach(b => b.onclick = () => { activeCategory = b.dataset.cat; setPref('ui.cat', activeCategory); render(); });
   v.querySelectorAll('.panel-tabs button').forEach(b => b.onclick = () => {
     panelTab = b.dataset.ptab; setPref('ui.panel', panelTab);
     v.querySelectorAll('.panel-tabs button').forEach(x => x.classList.toggle('on', x.dataset.ptab === panelTab));
@@ -1676,7 +1691,17 @@ let deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; });
 
 /* Service worker */
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+  // Cuando una versión nueva toma el control, recarga una vez para mostrar lo último
+  // (evita el clásico "no se ven los cambios" hasta recargar dos veces).
+  let swReloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (swReloaded) return;
+    swReloaded = true;
+    location.reload();
+  });
+}
 
 /* ---------- Pantalla de auth ---------- */
 function showAuthScreen(tab) {
