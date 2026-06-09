@@ -139,6 +139,7 @@ let panelTab = pref('ui.panel', 'pagos');  // pagos | habitos (pestaña en móvi
 let payFilter = pref('ui.pay', 'all');   // all | manual | auto | free
 let activeCategory = pref('ui.cat', 'all');
 let searchQuery = '';
+let onlyImportant = false;   // filtro "⭐ Solo importantes" en Inicio
 let calOffset = 0;
 let weekOffset = 0;
 let calView = pref('ui.calview', 'month');
@@ -435,6 +436,7 @@ function visibleLoops() {
 /* Orden por prioridad (vencidos/urgentes primero, luego por fecha) */
 function panelSort(list) {
   return list.sort((a,b) => {
+    if (!!a.important !== !!b.important) return a.important ? -1 : 1;  // los importantes (⭐) primero
     const sa = STATES[statusOf(a)].order, sb = STATES[statusOf(b)].order;
     if (sa !== sb) return sa - sb;
     return daysUntil(a.nextDate) - daysUntil(b.nextDate);
@@ -471,14 +473,19 @@ function renderInicio(v) {
   const isHabito = l => payType(l) === 'task';
   const pagosCount = loops.filter(isPago).length;
   const habitosCount = loops.filter(isHabito).length;
+  const importantCount = loops.filter(l => l.important).length;
+  if (!importantCount) onlyImportant = false;   // sin importantes no tiene sentido el filtro
 
   const fill = () => {
     const q = searchQuery;
     const norm = s => (s == null ? '' : String(s)).toLowerCase();
-    const m = l => !q || norm(l.title).includes(q) || norm(l.notes).includes(q) || norm((CATEGORIES[l.category]||{}).label).includes(q);
-    if (v) v.classList.toggle('searching', !!q);   // al buscar, muestra ambas columnas (no solo la pestaña activa)
-    fillPanel('list-pagos', panelSort(loops.filter(l => isPago(l) && m(l))), q ? 'Sin resultados' : 'Aún no tienes pagos. Toca “Nuevo”.');
-    fillPanel('list-habitos', panelSort(loops.filter(l => isHabito(l) && m(l))), q ? 'Sin resultados' : 'Aún no tienes hábitos. Toca “Nuevo”.');
+    const txt = l => !q || norm(l.title).includes(q) || norm(l.notes).includes(q) || norm((CATEGORIES[l.category]||{}).label).includes(q);
+    const m = l => txt(l) && (!onlyImportant || l.important);
+    // al buscar o filtrar por importantes, mostramos ambas columnas (no solo la pestaña activa)
+    if (v) v.classList.toggle('searching', !!q || onlyImportant);
+    const empty = onlyImportant ? 'Sin importantes aquí. Marca un loop con ⭐.' : (q ? 'Sin resultados' : null);
+    fillPanel('list-pagos', panelSort(loops.filter(l => isPago(l) && m(l))), empty || 'Aún no tienes pagos. Toca “Nuevo”.');
+    fillPanel('list-habitos', panelSort(loops.filter(l => isHabito(l) && m(l))), empty || 'Aún no tienes hábitos. Toca “Nuevo”.');
   };
 
   v.innerHTML = `
@@ -488,6 +495,9 @@ function renderInicio(v) {
       <span><b>${money0(monthly, def)}</b> / mes</span>
     </div>
     <input id="search" class="search-input" type="search" placeholder="Buscar…" autocomplete="off" value="${escapeAttr(searchQuery)}" />
+    ${importantCount ? `<div class="filter-row">
+      <button id="only-imp" class="chip ${onlyImportant?'on':''}">${svg('star')} Solo importantes <span class="pt-c">${importantCount}</span></button>
+    </div>` : ''}
     <div class="panel-tabs">
       <button data-ptab="pagos" class="${panelTab==='pagos'?'on':''}">${svg('wallet')} Pagos <span class="pt-c">${pagosCount}</span></button>
       <button data-ptab="habitos" class="${panelTab==='habitos'?'on':''}">${svg('checksq')} Hábitos <span class="pt-c">${habitosCount}</span></button>
@@ -506,6 +516,8 @@ function renderInicio(v) {
   fill();
   const s = v.querySelector('#search');
   s.oninput = (e) => { searchQuery = e.target.value.trim().toLowerCase(); fill(); };
+  const impBtn = v.querySelector('#only-imp');
+  if (impBtn) impBtn.onclick = () => { onlyImportant = !onlyImportant; impBtn.classList.toggle('on', onlyImportant); fill(); };
   v.querySelectorAll('.panel-tabs button').forEach(b => b.onclick = () => {
     panelTab = b.dataset.ptab; setPref('ui.panel', panelTab);
     v.querySelectorAll('.panel-tabs button').forEach(x => x.classList.toggle('on', x.dataset.ptab === panelTab));
@@ -541,7 +553,7 @@ function rowHTML(loop) {
       <div class="row-top">
         <span class="ic">${renderIcon(loop.icon || cat.icon)}</span>
         <div class="mid">
-          <div class="t">${escapeHtml(loop.title)}</div>
+          <div class="t">${loop.important ? `<span class="imp" title="Importante">${svg('star')}</span>` : ''}${escapeHtml(loop.title)}</div>
           <div class="m">${meta}</div>
           ${loop.notes ? `<div class="note">${escapeHtml(loop.notes)}</div>` : ''}
         </div>
@@ -950,6 +962,10 @@ function openForm(loop, opts) {
       <div><div class="tl">Pago automático</div><div class="ts">Se cobra solo; no tienes que pagarlo a mano.</div></div>
       <button type="button" class="switch ${data.autoPay?'on':''}" id="f-auto" aria-label="Pago automático"></button>
     </div></div>
+    <div class="field"><div class="toggle-row">
+      <div><div class="tl">⭐ Importante</div><div class="ts">Sube al inicio de su lista y aparece en “Solo importantes”.</div></div>
+      <button type="button" class="switch ${data.important?'on':''}" id="f-imp" aria-label="Importante"></button>
+    </div></div>
     <div class="field-row">
       <div class="field"><label>Próxima fecha</label><input id="f-date" type="date" value="${data.nextDate}" /></div>
       <div class="field"><label>Avisar (días antes)</label><input id="f-notify" type="number" min="0" max="60" value="${data.notifyDaysBefore ?? 3}" /></div>
@@ -968,13 +984,15 @@ function openForm(loop, opts) {
       <button class="btn btn-primary" id="f-save">${isEdit ? 'Guardar' : 'Agregar'}</button>
     </div>`;
   overlay.hidden = false;
-  let sel = { category: data.category, icon: data.icon, autoPay: !!data.autoPay };
+  let sel = { category: data.category, icon: data.icon, autoPay: !!data.autoPay, important: !!data.important };
   modal.querySelectorAll('#cat-picker button').forEach(b => b.onclick = () => {
     sel.category = b.dataset.cat; modal.querySelectorAll('#cat-picker button').forEach(x => x.classList.remove('sel')); b.classList.add('sel'); });
   modal.querySelectorAll('#icon-picker button').forEach(b => b.onclick = () => {
     sel.icon = b.dataset.icon; modal.querySelectorAll('#icon-picker button').forEach(x => x.classList.remove('sel')); b.classList.add('sel'); });
   const sw = modal.querySelector('#f-auto');
   sw.onclick = () => { sel.autoPay = !sel.autoPay; sw.classList.toggle('on', sel.autoPay); };
+  const swImp = modal.querySelector('#f-imp');
+  swImp.onclick = () => { sel.important = !sel.important; swImp.classList.toggle('on', sel.important); };
   const recN = modal.querySelector('#f-rec-n'), recU = modal.querySelector('#f-rec-unit'), recH = modal.querySelector('#rec-hint');
   function updRec() {
     recN.style.display = recU.value === 'none' ? 'none' : '';
@@ -1003,7 +1021,7 @@ function openForm(loop, opts) {
       amount: amountRaw === '' ? null : parseFloat(amountRaw), currency: modal.querySelector('#f-cur').value, autoPay: sel.autoPay,
       recur: ruv === 'none' ? { unit: 'none' } : { n: rnv, unit: ruv }, nextDate: modal.querySelector('#f-date').value,
       notifyDaysBefore: parseInt(modal.querySelector('#f-notify').value, 10) || 0,
-      notes: modal.querySelector('#f-notes').value.trim(),
+      notes: modal.querySelector('#f-notes').value.trim(), important: sel.important,
     });
     close();
   };
