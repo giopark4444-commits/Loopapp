@@ -11,6 +11,9 @@
   <link rel="apple-touch-icon" href="https://raw.githack.com/giopark4444-commits/Loopapp/claude/responsibility-org-dashboard-rpXbY/icon.svg" />
   <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Loopapp%22%2C%22short_name%22%3A%22Loopapp%22%2C%22display%22%3A%22standalone%22%2C%22start_url%22%3A%22https%3A%2F%2Fraw.githack.com%2Fgiopark4444-commits%2FLoopapp%2Fclaude%2Fresponsibility-org-dashboard-rpXbY%2Fstandalone.html%22%2C%22scope%22%3A%22https%3A%2F%2Fraw.githack.com%2Fgiopark4444-commits%2FLoopapp%2Fclaude%2Fresponsibility-org-dashboard-rpXbY%2F%22%2C%22background_color%22%3A%22%23f5f4ee%22%2C%22theme_color%22%3A%22%23c96442%22%2C%22lang%22%3A%22es%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22https%3A%2F%2Fraw.githack.com%2Fgiopark4444-commits%2FLoopapp%2Fclaude%2Fresponsibility-org-dashboard-rpXbY%2Ficon.svg%22%2C%22sizes%22%3A%22any%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%2C%22purpose%22%3A%22any%20maskable%22%7D%5D%7D" />
   <title>Loopapp — Todo lo que se repite, a la vista</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&display=swap" />
   <style>
 :root {
   --bg: #f6f4ef;
@@ -32,6 +35,7 @@
 
   --serif: ui-serif, "Iowan Old Style", Georgia, "Times New Roman", serif;
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --logo: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --shadow: 0 1px 2px rgba(38,36,32,.04), 0 10px 30px rgba(38,36,32,.07);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -44,8 +48,15 @@ svg { display: block; }
 .burger { width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 11px; background: var(--panel);
   display: flex; align-items: center; justify-content: center; color: var(--text); cursor: pointer; flex: 0 0 auto; }
 .burger svg { width: 18px; height: 18px; }
+.avatar { width: 42px; height: 42px; flex: 0 0 auto; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--panel) center / cover no-repeat; cursor: pointer; padding: 0; overflow: hidden;
+  display: flex; align-items: center; justify-content: center; color: var(--dim);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2386827a' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4 21c0-4 4-6 8-6s8 2 8 6'/%3E%3C/svg%3E");
+  background-size: 22px; background-position: center; }
+.avatar.has-img { background-size: cover; border-color: var(--accent); }
+.avatar:active { transform: scale(.96); }
 .brand { min-width: 0; }
-.brand h1 { font-family: var(--serif); font-size: 22px; font-weight: 600; letter-spacing: -.2px; }
+.brand h1 { font-family: var(--logo); font-size: 23px; font-weight: 800; letter-spacing: -.5px; }
 .brand p { font-size: 12.5px; color: var(--dim); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .newbtn { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line);
   background: var(--panel); border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 700; color: var(--text);
@@ -259,7 +270,7 @@ svg { display: block; }
 .drawer.open { transform: none; }
 .dhead { display: flex; align-items: center; gap: 10px; padding: 4px 8px 16px; }
 .dhead .lg { color: var(--accent); } .dhead .lg svg { width: 24px; height: 24px; }
-.dhead h2 { font-family: var(--serif); font-size: 20px; font-weight: 600; }
+.dhead h2 { font-family: var(--logo); font-size: 21px; font-weight: 800; letter-spacing: -.5px; }
 .nav a { display: flex; align-items: center; gap: 13px; padding: 12px 11px; border-radius: 11px; color: var(--text);
   cursor: pointer; font-size: 14.5px; font-weight: 600; }
 .nav a svg { width: 18px; height: 18px; color: var(--dim); }
@@ -500,6 +511,12 @@ body[data-layout="cards"] .row:active { background: var(--panel); }
 .home-filters .catsel span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .home-filters .catmenu { left: auto; right: 0; min-width: 240px; }
 
+/* Barra superior del Inicio: en móvil se apila (buscador+categoría arriba, pestañas debajo);
+   en desktop, todo en una línea: Pagos · Hábitos · Importantes · Buscar · Categorías */
+.home-toolbar { display: flex; flex-direction: column; }
+.home-toolbar .home-filters { order: 1; }
+.home-toolbar .panel-tabs { order: 2; }
+
 /* ===========================================================
    Inicio: Pagos / Hábitos (lado a lado en desktop, pestañas en móvil)
    =========================================================== */
@@ -546,12 +563,16 @@ body[data-layout="comfy"] .star-btn svg { width: 18px; height: 18px; }
 #view.searching .imp-col { display: none !important; }   /* al buscar no mostramos la vista (duplicada) de importantes */
 
 @media (min-width: 760px) {
-  .panel-tabs { display: none; }            /* en pantalla ancha no hacen falta pestañas */
-  .panel-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; align-items: start; }
-  .panel-cols.has-imp { grid-template-columns: 1fr 1fr 1fr; }   /* con importantes, tres columnas */
-  #view.searching .panel-cols.has-imp { grid-template-columns: 1fr 1fr; }  /* al buscar, sin la 3ª */
-  .panel-col { display: block !important; } /* se muestran las columnas a la vez */
-  .panel-h { padding-top: 4px; }
+  /* Toolbar en una sola línea: Pagos · Hábitos · Importantes · Buscar · Categorías */
+  .home-toolbar { flex-direction: row; flex-wrap: wrap; align-items: stretch; gap: 10px; margin: 16px 16px 8px; max-width: 1000px; }
+  .home-toolbar .panel-tabs { order: 1; display: flex; flex: 0 0 auto; margin: 0; gap: 8px; }
+  .home-toolbar .panel-tabs button { flex: 0 0 auto; padding: 10px 16px; }
+  .home-toolbar .home-filters { order: 2; flex: 1 1 300px; margin: 0; }
+  .home-toolbar .home-filters .catbar { width: auto; flex: 0 0 200px; }
+  /* Una sola columna activa, como en móvil, pero centrada y con ancho cómodo */
+  .panel-cols { display: block; }
+  .panel-col .list { max-width: 760px; }
+  .panel-h { padding-top: 6px; max-width: 760px; }
 }
 
 /* ===========================================================
@@ -676,6 +697,7 @@ body[data-layout="comfy"] .star-btn svg { width: 18px; height: 18px; }
   <div id="app">
     <header class="hd">
       <button class="burger" id="menu-toggle" aria-label="Menú" data-ico="menu"></button>
+      <button class="avatar" id="avatar" aria-label="Foto de perfil" title="Toca para cambiar tu foto"></button>
       <div class="brand">
         <h1>Loopapp</h1>
         <p id="greeting">Todo lo que se repite, a la vista</p>
@@ -697,6 +719,9 @@ body[data-layout="comfy"] .star-btn svg { width: 18px; height: 18px; }
   <div class="modal-overlay" id="modal-overlay" hidden>
     <div class="modal" id="modal"></div>
   </div>
+
+  <!-- Input oculto para la foto de perfil -->
+  <input id="avatar-file" type="file" accept="image/*" hidden />
 
   <!-- Input oculto para importar respaldo -->
   <input id="import-file" type="file" accept="application/json,.json" hidden />
@@ -1210,7 +1235,7 @@ function renderInicio(v) {
   const importantCount = loops.filter(l => l.important).length;
 
   // Selector de categorías (junto al buscador): filtra las tres columnas
-  const curCat = activeCategory === 'all' ? { label:'Todas las categorías', icon:'list' } : (CATEGORIES[activeCategory] || { label:'Todas las categorías', icon:'list' });
+  const curCat = activeCategory === 'all' ? { label:'Categorías', icon:'list' } : (CATEGORIES[activeCategory] || { label:'Categorías', icon:'list' });
   const catOpt = (key,label,icon) => `<button class="catopt ${activeCategory===key?'on':''}" data-cat="${key}">${svg(icon)} ${escapeHtml(label)}</button>`;
   let catMenu = catOpt('all','Todas las categorías','list');
   Object.keys(CATEGORIES).forEach(k => { catMenu += catOpt(k, CATEGORIES[k].label, CATEGORIES[k].icon); });
@@ -1234,17 +1259,19 @@ function renderInicio(v) {
       ${urgent ? `<span>● ${urgent} urgente${urgent>1?'s':''}</span>` : ''}
       <span><b>${money0(monthly, def)}</b> / mes</span>
     </div>
-    <div class="home-filters">
-      <input id="search" class="search-input" type="search" placeholder="Buscar…" autocomplete="off" value="${escapeAttr(searchQuery)}" />
-      <div class="catbar">
-        <button class="catsel" id="catsel" aria-haspopup="true">${svg(curCat.icon)}<span>${escapeHtml(curCat.label)}</span>${svg('chevron-down')}</button>
-        <div class="catmenu" id="catmenu" hidden>${catMenu}</div>
+    <div class="home-toolbar">
+      <div class="panel-tabs">
+        <button data-ptab="pagos" class="${panelTab==='pagos'?'on':''}">${svg('wallet')} Pagos <span class="pt-c">${pagosCount}</span></button>
+        <button data-ptab="habitos" class="${panelTab==='habitos'?'on':''}">${svg('checksq')} Hábitos <span class="pt-c">${habitosCount}</span></button>
+        <button data-ptab="importantes" class="imp-tab ${panelTab==='importantes'?'on':''}">${svg('star')} Importantes <span class="pt-c">${importantCount}</span></button>
       </div>
-    </div>
-    <div class="panel-tabs">
-      <button data-ptab="pagos" class="${panelTab==='pagos'?'on':''}">${svg('wallet')} Pagos <span class="pt-c">${pagosCount}</span></button>
-      <button data-ptab="habitos" class="${panelTab==='habitos'?'on':''}">${svg('checksq')} Hábitos <span class="pt-c">${habitosCount}</span></button>
-      <button data-ptab="importantes" class="imp-tab ${panelTab==='importantes'?'on':''}">${svg('star')} Importantes <span class="pt-c">${importantCount}</span></button>
+      <div class="home-filters">
+        <input id="search" class="search-input" type="search" placeholder="Buscar…" autocomplete="off" value="${escapeAttr(searchQuery)}" />
+        <div class="catbar">
+          <button class="catsel" id="catsel" aria-haspopup="true">${svg(curCat.icon)}<span>${escapeHtml(curCat.label)}</span>${svg('chevron-down')}</button>
+          <div class="catmenu" id="catmenu" hidden>${catMenu}</div>
+        </div>
+      </div>
     </div>
     <div class="panel-cols has-imp">
       <section class="panel-col ${panelTab==='pagos'?'act':''}" data-col="pagos">
@@ -1822,6 +1849,40 @@ function escapeAttr(s) { return escapeHtml(s); }
    ============================================================ */
 document.getElementById('add-btn').onclick = () => openForm(null);
 document.getElementById('menu-toggle').onclick = openDrawer;
+
+/* ---------- Foto de perfil ---------- */
+const AVATAR_KEY = 'loopapp.avatar';
+function applyAvatar() {
+  const el = document.getElementById('avatar'); if (!el) return;
+  const data = localStorage.getItem(AVATAR_KEY);
+  if (data) { el.style.backgroundImage = `url("${data}")`; el.classList.add('has-img'); }
+  else { el.style.backgroundImage = ''; el.classList.remove('has-img'); }
+}
+(() => {
+  const btn = document.getElementById('avatar'), inp = document.getElementById('avatar-file');
+  if (!btn || !inp) return;
+  btn.onclick = () => inp.click();
+  inp.onchange = () => {
+    const file = inp.files && inp.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        // Redimensionamos a 160x160 (recorte cuadrado) para no llenar el almacenamiento
+        const S = 160, c = document.createElement('canvas'); c.width = c.height = S;
+        const ctx = c.getContext('2d');
+        const side = Math.min(img.width, img.height);
+        ctx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, S, S);
+        try { localStorage.setItem(AVATAR_KEY, c.toDataURL('image/jpeg', 0.85)); } catch (e) {}
+        applyAvatar();
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+    inp.value = '';
+  };
+  applyAvatar();
+})();
 document.getElementById('scrim').onclick = closeDrawer;
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeDrawer(); } });
 document.addEventListener('click', (e) => {

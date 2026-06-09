@@ -474,7 +474,7 @@ function renderInicio(v) {
   const importantCount = loops.filter(l => l.important).length;
 
   // Selector de categorías (junto al buscador): filtra las tres columnas
-  const curCat = activeCategory === 'all' ? { label:'Todas las categorías', icon:'list' } : (CATEGORIES[activeCategory] || { label:'Todas las categorías', icon:'list' });
+  const curCat = activeCategory === 'all' ? { label:'Categorías', icon:'list' } : (CATEGORIES[activeCategory] || { label:'Categorías', icon:'list' });
   const catOpt = (key,label,icon) => `<button class="catopt ${activeCategory===key?'on':''}" data-cat="${key}">${svg(icon)} ${escapeHtml(label)}</button>`;
   let catMenu = catOpt('all','Todas las categorías','list');
   Object.keys(CATEGORIES).forEach(k => { catMenu += catOpt(k, CATEGORIES[k].label, CATEGORIES[k].icon); });
@@ -498,17 +498,19 @@ function renderInicio(v) {
       ${urgent ? `<span>● ${urgent} urgente${urgent>1?'s':''}</span>` : ''}
       <span><b>${money0(monthly, def)}</b> / mes</span>
     </div>
-    <div class="home-filters">
-      <input id="search" class="search-input" type="search" placeholder="Buscar…" autocomplete="off" value="${escapeAttr(searchQuery)}" />
-      <div class="catbar">
-        <button class="catsel" id="catsel" aria-haspopup="true">${svg(curCat.icon)}<span>${escapeHtml(curCat.label)}</span>${svg('chevron-down')}</button>
-        <div class="catmenu" id="catmenu" hidden>${catMenu}</div>
+    <div class="home-toolbar">
+      <div class="panel-tabs">
+        <button data-ptab="pagos" class="${panelTab==='pagos'?'on':''}">${svg('wallet')} Pagos <span class="pt-c">${pagosCount}</span></button>
+        <button data-ptab="habitos" class="${panelTab==='habitos'?'on':''}">${svg('checksq')} Hábitos <span class="pt-c">${habitosCount}</span></button>
+        <button data-ptab="importantes" class="imp-tab ${panelTab==='importantes'?'on':''}">${svg('star')} Importantes <span class="pt-c">${importantCount}</span></button>
       </div>
-    </div>
-    <div class="panel-tabs">
-      <button data-ptab="pagos" class="${panelTab==='pagos'?'on':''}">${svg('wallet')} Pagos <span class="pt-c">${pagosCount}</span></button>
-      <button data-ptab="habitos" class="${panelTab==='habitos'?'on':''}">${svg('checksq')} Hábitos <span class="pt-c">${habitosCount}</span></button>
-      <button data-ptab="importantes" class="imp-tab ${panelTab==='importantes'?'on':''}">${svg('star')} Importantes <span class="pt-c">${importantCount}</span></button>
+      <div class="home-filters">
+        <input id="search" class="search-input" type="search" placeholder="Buscar…" autocomplete="off" value="${escapeAttr(searchQuery)}" />
+        <div class="catbar">
+          <button class="catsel" id="catsel" aria-haspopup="true">${svg(curCat.icon)}<span>${escapeHtml(curCat.label)}</span>${svg('chevron-down')}</button>
+          <div class="catmenu" id="catmenu" hidden>${catMenu}</div>
+        </div>
+      </div>
     </div>
     <div class="panel-cols has-imp">
       <section class="panel-col ${panelTab==='pagos'?'act':''}" data-col="pagos">
@@ -1086,6 +1088,40 @@ function escapeAttr(s) { return escapeHtml(s); }
    ============================================================ */
 document.getElementById('add-btn').onclick = () => openForm(null);
 document.getElementById('menu-toggle').onclick = openDrawer;
+
+/* ---------- Foto de perfil ---------- */
+const AVATAR_KEY = 'loopapp.avatar';
+function applyAvatar() {
+  const el = document.getElementById('avatar'); if (!el) return;
+  const data = localStorage.getItem(AVATAR_KEY);
+  if (data) { el.style.backgroundImage = `url("${data}")`; el.classList.add('has-img'); }
+  else { el.style.backgroundImage = ''; el.classList.remove('has-img'); }
+}
+(() => {
+  const btn = document.getElementById('avatar'), inp = document.getElementById('avatar-file');
+  if (!btn || !inp) return;
+  btn.onclick = () => inp.click();
+  inp.onchange = () => {
+    const file = inp.files && inp.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        // Redimensionamos a 160x160 (recorte cuadrado) para no llenar el almacenamiento
+        const S = 160, c = document.createElement('canvas'); c.width = c.height = S;
+        const ctx = c.getContext('2d');
+        const side = Math.min(img.width, img.height);
+        ctx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, S, S);
+        try { localStorage.setItem(AVATAR_KEY, c.toDataURL('image/jpeg', 0.85)); } catch (e) {}
+        applyAvatar();
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+    inp.value = '';
+  };
+  applyAvatar();
+})();
 document.getElementById('scrim').onclick = closeDrawer;
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeDrawer(); } });
 document.addEventListener('click', (e) => {
