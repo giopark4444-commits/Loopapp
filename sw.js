@@ -1,5 +1,5 @@
 /* Loopapp service worker — cache simple para uso offline */
-const CACHE = 'loopapp-v40';
+const CACHE = 'loopapp-v42';
 const ASSETS = [
   './',
   './index.html',
