@@ -7,10 +7,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="Loopapp" />
+  <meta name="apple-mobile-web-app-title" content="Loopkeeper" />
   <link rel="apple-touch-icon" href="https://raw.githack.com/giopark4444-commits/Loopapp/claude/responsibility-org-dashboard-rpXbY/icon.svg" />
-  <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Loopapp%22%2C%22short_name%22%3A%22Loopapp%22%2C%22display%22%3A%22standalone%22%2C%22start_url%22%3A%22https%3A%2F%2Fraw.githack.com%2Fgiopark4444-commits%2FLoopapp%2Fclaude%2Fresponsibility-org-dashboard-rpXbY%2Fstandalone.html%22%2C%22scope%22%3A%22https%3A%2F%2Fraw.githack.com%2Fgiopark4444-commits%2FLoopapp%2Fclaude%2Fresponsibility-org-dashboard-rpXbY%2F%22%2C%22background_color%22%3A%22%23f5f4ee%22%2C%22theme_color%22%3A%22%23c96442%22%2C%22lang%22%3A%22es%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22https%3A%2F%2Fraw.githack.com%2Fgiopark4444-commits%2FLoopapp%2Fclaude%2Fresponsibility-org-dashboard-rpXbY%2Ficon.svg%22%2C%22sizes%22%3A%22any%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%2C%22purpose%22%3A%22any%20maskable%22%7D%5D%7D" />
-  <title>Loopapp — Todo lo que se repite, a la vista</title>
+  <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Loopkeeper%22%2C%22short_name%22%3A%22Loopkeeper%22%2C%22display%22%3A%22standalone%22%2C%22start_url%22%3A%22https%3A%2F%2Fraw.githack.com%2Fgiopark4444-commits%2FLoopapp%2Fclaude%2Fresponsibility-org-dashboard-rpXbY%2Fstandalone.html%22%2C%22scope%22%3A%22https%3A%2F%2Fraw.githack.com%2Fgiopark4444-commits%2FLoopapp%2Fclaude%2Fresponsibility-org-dashboard-rpXbY%2F%22%2C%22background_color%22%3A%22%23f5f4ee%22%2C%22theme_color%22%3A%22%23c96442%22%2C%22lang%22%3A%22es%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22https%3A%2F%2Fraw.githack.com%2Fgiopark4444-commits%2FLoopapp%2Fclaude%2Fresponsibility-org-dashboard-rpXbY%2Ficon.svg%22%2C%22sizes%22%3A%22any%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%2C%22purpose%22%3A%22any%20maskable%22%7D%5D%7D" />
+  <title>Loopkeeper — Todo lo que se repite, a la vista</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&display=swap" />
@@ -721,7 +721,7 @@ body[data-layout="comfy"] .star-btn svg { width: 18px; height: 18px; }
       <button class="burger" id="menu-toggle" aria-label="Menú" data-ico="menu"></button>
       <button class="avatar" id="avatar" aria-label="Foto de perfil" title="Toca para cambiar tu foto"></button>
       <div class="brand">
-        <h1>Loopapp</h1>
+        <h1>Loopkeeper</h1>
         <p id="greeting">Todo lo que se repite, a la vista</p>
       </div>
       <button class="newbtn" id="add-btn"><span data-ico="plus"></span> Nuevo</button>
@@ -733,7 +733,7 @@ body[data-layout="comfy"] .star-btn svg { width: 18px; height: 18px; }
   <!-- Menú lateral -->
   <div class="scrim" id="scrim" hidden></div>
   <nav class="drawer" id="drawer" aria-label="Navegación">
-    <div class="dhead"><span class="lg" data-ico="repeat"></span><h2>Loopapp</h2></div>
+    <div class="dhead"><span class="lg" data-ico="repeat"></span><h2>Loopkeeper</h2></div>
     <div class="nav" id="nav"></div>
   </nav>
 
@@ -1214,7 +1214,7 @@ function shareLoop(loop) {
   if (loop.amount) parts.push(amtLabel(loop));
   parts.push(recurLabel(loop), 'Próx.: ' + loop.nextDate);
   if (loop.notes) parts.push(loop.notes);
-  const text = 'Loopapp · ' + parts.join(' · ');
+  const text = 'Loopkeeper · ' + parts.join(' · ');
   if (navigator.share) navigator.share({ text }).catch(() => {});
   else { try { navigator.clipboard.writeText(text); alert('Copiado:\n\n' + text); } catch (e) { alert(text); } }
 }
@@ -1304,7 +1304,7 @@ function renderInicio(v) {
   if (!loops.length) {
     v.innerHTML = `<div class="welcome">
       <div class="wc-logo">${svg('repeat')}</div>
-      <h2>Bienvenido a Loopapp</h2>
+      <h2>Bienvenido a Loopkeeper</h2>
       <p>Todo lo que se repite —pagos, suscripciones, rutinas, recados— en un solo lugar, con cuenta regresiva, prioridad y avisos.</p>
       <button class="btn btn-primary" id="wc-new">Crear mi primer Loop</button>
       <button class="wc-link" id="wc-seed">Ver con datos de ejemplo</button>
@@ -1759,7 +1759,7 @@ function renderAjustes(v) {
       <button class="opt" id="o-install" hidden>${svg('smartphone')} Instalar como app</button>
       <button class="opt danger" id="o-reset">${svg('rotate')} Restablecer datos de ejemplo</button></div>
     <div class="brk" id="brk-cuenta"><h4>Cuenta</h4></div>
-    <p class="sub" style="text-align:center;margin:18px 16px 0;font-size:12px">Loopapp · tus datos se guardan en tu cuenta</p>`;
+    <p class="sub" style="text-align:center;margin:18px 16px 0;font-size:12px">Loopkeeper · tus datos se guardan en tu cuenta</p>`;
   v.querySelectorAll('.swatch').forEach(s => s.onclick = () => { applyTheme(s.dataset.theme); render(); });
   v.querySelectorAll('.ct-row input[type=color]').forEach(inp => {
     inp.oninput = () => {
@@ -2046,7 +2046,7 @@ importFile.onchange = (e) => {
       if (!n && !Array.isArray(data) && !(data && data.loops)) throw new Error('formato');
       if (!confirm(`Importar ${n} Loop${n===1?'':'s'}? Esto reemplazará los datos actuales.`)) return;
       applyBackup(data);
-    } catch (err) { alert('Archivo no válido. Debe ser un respaldo .json de Loopapp.'); }
+    } catch (err) { alert('Archivo no válido. Debe ser un respaldo .json de Loopkeeper.'); }
     finally { importFile.value = ''; }
   };
   r.readAsText(file);
@@ -2187,7 +2187,7 @@ function pasteBackup() {
     if (!n && !(data && data.loops)) throw new Error('formato');
     if (!confirm(`Restaurar ${n} Loop${n===1?'':'s'}? Esto reemplazará los datos actuales.`)) return;
     applyBackup(data);
-  } catch (e) { alert('El texto no es un respaldo válido de Loopapp.'); }
+  } catch (e) { alert('El texto no es un respaldo válido de Loopkeeper.'); }
 }
 
 /* ---------- Exportar al calendario (Apple / Google) ---------- */
@@ -2208,7 +2208,7 @@ function loopVEvent(l) {
   return e.join('\r\n');
 }
 function buildICS(list) {
-  return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Loopapp//ES', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:Loopapp',
+  return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Loopkeeper//ES', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:Loopkeeper',
     ...list.map(loopVEvent), 'END:VCALENDAR'].join('\r\n');
 }
 function downloadICS(list, name) {
@@ -2588,7 +2588,7 @@ function checkDue() {
     const st = statusOf(l);
     if (['overdue','urgent','upcoming'].includes(st)) {
       const key = `${l.id}@${today}`;
-      if (!sent[key]) { try { new Notification(`Loopapp · ${l.title}`, { body: st==='overdue'?'¡Vencido!':'Próximo a vencer.', icon: 'icon.svg', tag: l.id }); } catch(e){} sent[key] = true; }
+      if (!sent[key]) { try { new Notification(`Loopkeeper · ${l.title}`, { body: st==='overdue'?'¡Vencido!':'Próximo a vencer.', icon: 'icon.svg', tag: l.id }); } catch(e){} sent[key] = true; }
     }
   });
   localStorage.setItem(NOTIFY_SENT_KEY, JSON.stringify(sent));
@@ -2625,7 +2625,7 @@ function renderAuthScreen(tab) {
   const scr = document.getElementById('auth-screen'); if (!scr) return;
   scr.innerHTML = `
     <div class="auth-box">
-      <div class="auth-logo">${svg('repeat')}<span>Loopapp</span></div>
+      <div class="auth-logo">${svg('repeat')}<span>Loopkeeper</span></div>
       <div class="auth-tabs">
         <button id="tab-signin" class="${tab==='signin'?'act':''}">Entrar</button>
         <button id="tab-signup" class="${tab==='signup'?'act':''}">Crear cuenta</button>

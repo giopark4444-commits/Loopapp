@@ -1,6 +1,6 @@
 {
-  "name": "Loopapp — Todo lo que se repite, a la vista",
-  "short_name": "Loopapp",
+  "name": "Loopkeeper — Todo lo que se repite, a la vista",
+  "short_name": "Loopkeeper",
   "description": "Dashboard visual de responsabilidades recurrentes: suscripciones, pagos, rutinas y recados, con cuentas regresivas y colores por estado.",
   "start_url": "./index.html",
   "display": "standalone",

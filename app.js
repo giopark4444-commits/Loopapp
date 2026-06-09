@@ -431,7 +431,7 @@ function shareLoop(loop) {
   if (loop.amount) parts.push(amtLabel(loop));
   parts.push(recurLabel(loop), 'Próx.: ' + loop.nextDate);
   if (loop.notes) parts.push(loop.notes);
-  const text = 'Loopapp · ' + parts.join(' · ');
+  const text = 'Loopkeeper · ' + parts.join(' · ');
   if (navigator.share) navigator.share({ text }).catch(() => {});
   else { try { navigator.clipboard.writeText(text); alert('Copiado:\n\n' + text); } catch (e) { alert(text); } }
 }
@@ -521,7 +521,7 @@ function renderInicio(v) {
   if (!loops.length) {
     v.innerHTML = `<div class="welcome">
       <div class="wc-logo">${svg('repeat')}</div>
-      <h2>Bienvenido a Loopapp</h2>
+      <h2>Bienvenido a Loopkeeper</h2>
       <p>Todo lo que se repite —pagos, suscripciones, rutinas, recados— en un solo lugar, con cuenta regresiva, prioridad y avisos.</p>
       <button class="btn btn-primary" id="wc-new">Crear mi primer Loop</button>
       <button class="wc-link" id="wc-seed">Ver con datos de ejemplo</button>
@@ -976,7 +976,7 @@ function renderAjustes(v) {
       <button class="opt" id="o-install" hidden>${svg('smartphone')} Instalar como app</button>
       <button class="opt danger" id="o-reset">${svg('rotate')} Restablecer datos de ejemplo</button></div>
     <div class="brk" id="brk-cuenta"><h4>Cuenta</h4></div>
-    <p class="sub" style="text-align:center;margin:18px 16px 0;font-size:12px">Loopapp · tus datos se guardan en tu cuenta</p>`;
+    <p class="sub" style="text-align:center;margin:18px 16px 0;font-size:12px">Loopkeeper · tus datos se guardan en tu cuenta</p>`;
   v.querySelectorAll('.swatch').forEach(s => s.onclick = () => { applyTheme(s.dataset.theme); render(); });
   v.querySelectorAll('.ct-row input[type=color]').forEach(inp => {
     inp.oninput = () => {
@@ -1263,7 +1263,7 @@ importFile.onchange = (e) => {
       if (!n && !Array.isArray(data) && !(data && data.loops)) throw new Error('formato');
       if (!confirm(`Importar ${n} Loop${n===1?'':'s'}? Esto reemplazará los datos actuales.`)) return;
       applyBackup(data);
-    } catch (err) { alert('Archivo no válido. Debe ser un respaldo .json de Loopapp.'); }
+    } catch (err) { alert('Archivo no válido. Debe ser un respaldo .json de Loopkeeper.'); }
     finally { importFile.value = ''; }
   };
   r.readAsText(file);
@@ -1404,7 +1404,7 @@ function pasteBackup() {
     if (!n && !(data && data.loops)) throw new Error('formato');
     if (!confirm(`Restaurar ${n} Loop${n===1?'':'s'}? Esto reemplazará los datos actuales.`)) return;
     applyBackup(data);
-  } catch (e) { alert('El texto no es un respaldo válido de Loopapp.'); }
+  } catch (e) { alert('El texto no es un respaldo válido de Loopkeeper.'); }
 }
 
 /* ---------- Exportar al calendario (Apple / Google) ---------- */
@@ -1425,7 +1425,7 @@ function loopVEvent(l) {
   return e.join('\r\n');
 }
 function buildICS(list) {
-  return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Loopapp//ES', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:Loopapp',
+  return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Loopkeeper//ES', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:Loopkeeper',
     ...list.map(loopVEvent), 'END:VCALENDAR'].join('\r\n');
 }
 function downloadICS(list, name) {
@@ -1805,7 +1805,7 @@ function checkDue() {
     const st = statusOf(l);
     if (['overdue','urgent','upcoming'].includes(st)) {
       const key = `${l.id}@${today}`;
-      if (!sent[key]) { try { new Notification(`Loopapp · ${l.title}`, { body: st==='overdue'?'¡Vencido!':'Próximo a vencer.', icon: 'icon.svg', tag: l.id }); } catch(e){} sent[key] = true; }
+      if (!sent[key]) { try { new Notification(`Loopkeeper · ${l.title}`, { body: st==='overdue'?'¡Vencido!':'Próximo a vencer.', icon: 'icon.svg', tag: l.id }); } catch(e){} sent[key] = true; }
     }
   });
   localStorage.setItem(NOTIFY_SENT_KEY, JSON.stringify(sent));
@@ -1842,7 +1842,7 @@ function renderAuthScreen(tab) {
   const scr = document.getElementById('auth-screen'); if (!scr) return;
   scr.innerHTML = `
     <div class="auth-box">
-      <div class="auth-logo">${svg('repeat')}<span>Loopapp</span></div>
+      <div class="auth-logo">${svg('repeat')}<span>Loopkeeper</span></div>
       <div class="auth-tabs">
         <button id="tab-signin" class="${tab==='signin'?'act':''}">Entrar</button>
         <button id="tab-signup" class="${tab==='signup'?'act':''}">Crear cuenta</button>

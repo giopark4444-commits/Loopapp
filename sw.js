@@ -1,5 +1,5 @@
 /* Loopapp service worker — cache simple para uso offline */
-const CACHE = 'loopapp-v48';
+const CACHE = 'loopapp-v49';
 const ASSETS = [
   './',
   './index.html',
@@ -53,7 +53,7 @@ self.addEventListener('fetch', (e) => {
 self.addEventListener('push', (e) => {
   let data = {};
   try { data = e.data ? e.data.json() : {}; } catch (_) {}
-  const title = data.title || 'Loopapp';
+  const title = data.title || 'Loopkeeper';
   const body = data.body || 'Tienes un recordatorio.';
   e.waitUntil(self.registration.showNotification(title, {
     body, icon: './icon.svg', badge: './icon.svg',
