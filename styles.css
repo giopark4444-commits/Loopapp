@@ -479,27 +479,22 @@ body[data-layout="cards"] .row:active { background: var(--panel); }
 /* ===========================================================
    Inicio: Pagos / Hábitos (lado a lado en desktop, pestañas en móvil)
    =========================================================== */
-/* Fila de filtros (chip "Solo importantes") */
-.filter-row { display: flex; gap: 6px; margin: 10px 16px 0; }
-.filter-row .chip { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line);
-  background: var(--panel); color: var(--dim); padding: 7px 12px; border-radius: 999px;
-  font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; }
-.filter-row .chip svg { width: 15px; height: 15px; }
-.filter-row .chip.on { background: var(--accent-tint); border-color: var(--accent); color: var(--accent); }
-.filter-row .chip.on svg { color: var(--accent); }
-.filter-row .chip .pt-c { font-size: 12px; font-weight: 800; background: var(--bg); border-radius: 999px; padding: 1px 8px; }
 /* Estrellita de "importante" junto al título */
 .row .t .imp { display: inline-flex; vertical-align: -2px; margin-right: 4px; }
 .row .t .imp svg { width: 14px; height: 14px; color: #f5a623; fill: #f5a623; }
 
 .panel-tabs { display: flex; gap: 6px; margin: 12px 16px 4px; }
-.panel-tabs button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+.panel-tabs button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   border: 1px solid var(--line); background: var(--panel); color: var(--dim);
-  padding: 11px; border-radius: 12px; font-size: 14px; font-weight: 700; font-family: inherit; cursor: pointer; }
-.panel-tabs button svg { width: 16px; height: 16px; }
+  padding: 11px 7px; border-radius: 12px; font-size: 13.5px; font-weight: 700; font-family: inherit; cursor: pointer;
+  white-space: nowrap; min-width: 0; overflow: hidden; }
+.panel-tabs button svg { width: 16px; height: 16px; flex: none; }
 .panel-tabs button.on { background: var(--accent-tint); border-color: var(--accent); color: var(--accent); }
 .panel-tabs button.on svg { color: var(--accent); }
-.panel-tabs .pt-c { font-size: 12px; font-weight: 800; background: var(--bg); border-radius: 999px; padding: 1px 8px; }
+.panel-tabs .imp-tab.on { background: rgba(245,166,35,.14); border-color: #f5a623; color: #b5790a; }
+.panel-tabs .imp-tab.on svg { color: #f5a623; }
+.panel-tabs .pt-c { font-size: 12px; font-weight: 800; background: var(--bg); border-radius: 999px; padding: 1px 8px; flex: none; }
+.imp-col .panel-h svg { color: #f5a623; }
 .panel-h { display: flex; align-items: center; gap: 8px; font-family: var(--serif); font-size: 17px; font-weight: 600; padding: 10px 20px 2px; }
 .panel-h svg { width: 18px; height: 18px; color: var(--accent); }
 .panel-h span { margin-left: auto; font-family: var(--sans); font-size: 12.5px; font-weight: 700; color: var(--dim); }
@@ -507,14 +502,17 @@ body[data-layout="cards"] .row:active { background: var(--panel); }
 .panel-col .list { display: block !important; grid-template-columns: none !important; margin: 4px 6px 0; }
 /* Móvil: solo se ve la columna activa (la otra la oculta la pestaña) */
 .panel-col:not(.act) { display: none; }
-/* …salvo cuando buscas: ahí mostramos las dos columnas con sus resultados */
+/* …salvo cuando buscas: ahí mostramos Pagos y Hábitos con sus resultados */
 #view.searching .panel-tabs { display: none; }
 #view.searching .panel-col { display: block !important; }
+#view.searching .imp-col { display: none !important; }   /* al buscar no mostramos la vista (duplicada) de importantes */
 
 @media (min-width: 760px) {
   .panel-tabs { display: none; }            /* en pantalla ancha no hacen falta pestañas */
   .panel-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; align-items: start; }
-  .panel-col { display: block !important; } /* se muestran las dos a la vez */
+  .panel-cols.has-imp { grid-template-columns: 1fr 1fr 1fr; }   /* con importantes, tres columnas */
+  #view.searching .panel-cols.has-imp { grid-template-columns: 1fr 1fr; }  /* al buscar, sin la 3ª */
+  .panel-col { display: block !important; } /* se muestran las columnas a la vez */
   .panel-h { padding-top: 4px; }
 }
 
