@@ -139,6 +139,7 @@ let panelTab = pref('ui.panel', 'pagos');  // pagos | habitos (pestaña en móvi
 let payFilter = pref('ui.pay', 'all');   // all | manual | auto | free
 let activeCategory = pref('ui.cat', 'all');
 let searchQuery = '';
+let onlyImportant = false;   // filtro "⭐ Solo importantes" en Inicio
 let calOffset = 0;
 let weekOffset = 0;
 let calView = pref('ui.calview', 'month');
@@ -473,17 +474,18 @@ function renderInicio(v) {
   const pagosCount = loops.filter(isPago).length;
   const habitosCount = loops.filter(isHabito).length;
   const importantCount = loops.filter(l => l.important).length;
-  if (!importantCount && panelTab === 'importantes') panelTab = 'pagos';   // sin importantes, no dejes esa pestaña activa
+  if (!importantCount) onlyImportant = false;   // sin importantes no tiene sentido el filtro
 
   const fill = () => {
     const q = searchQuery;
     const norm = s => (s == null ? '' : String(s)).toLowerCase();
-    const m = l => !q || norm(l.title).includes(q) || norm(l.notes).includes(q) || norm((CATEGORIES[l.category]||{}).label).includes(q);
-    // al buscar, mostramos Pagos y Hábitos a la vez (no solo la pestaña activa)
-    if (v) v.classList.toggle('searching', !!q);
-    fillPanel('list-pagos', panelSort(loops.filter(l => isPago(l) && m(l))), q ? 'Sin resultados' : 'Aún no tienes pagos. Toca “Nuevo”.');
-    fillPanel('list-habitos', panelSort(loops.filter(l => isHabito(l) && m(l))), q ? 'Sin resultados' : 'Aún no tienes hábitos. Toca “Nuevo”.');
-    if (importantCount) fillPanel('list-importantes', panelSort(loops.filter(l => l.important && m(l))), q ? 'Sin resultados' : 'Marca un loop con ⭐ para verlo aquí.');
+    const txt = l => !q || norm(l.title).includes(q) || norm(l.notes).includes(q) || norm((CATEGORIES[l.category]||{}).label).includes(q);
+    const m = l => txt(l) && (!onlyImportant || l.important);
+    // al buscar o filtrar por importantes, mostramos ambas columnas (no solo la pestaña activa)
+    if (v) v.classList.toggle('searching', !!q || onlyImportant);
+    const empty = onlyImportant ? 'Sin importantes aquí. Marca un loop con ⭐.' : (q ? 'Sin resultados' : null);
+    fillPanel('list-pagos', panelSort(loops.filter(l => isPago(l) && m(l))), empty || 'Aún no tienes pagos. Toca “Nuevo”.');
+    fillPanel('list-habitos', panelSort(loops.filter(l => isHabito(l) && m(l))), empty || 'Aún no tienes hábitos. Toca “Nuevo”.');
   };
 
   v.innerHTML = `
@@ -493,12 +495,14 @@ function renderInicio(v) {
       <span><b>${money0(monthly, def)}</b> / mes</span>
     </div>
     <input id="search" class="search-input" type="search" placeholder="Buscar…" autocomplete="off" value="${escapeAttr(searchQuery)}" />
+    ${importantCount ? `<div class="filter-row">
+      <button id="only-imp" class="chip ${onlyImportant?'on':''}">${svg('star')} Solo importantes <span class="pt-c">${importantCount}</span></button>
+    </div>` : ''}
     <div class="panel-tabs">
       <button data-ptab="pagos" class="${panelTab==='pagos'?'on':''}">${svg('wallet')} Pagos <span class="pt-c">${pagosCount}</span></button>
       <button data-ptab="habitos" class="${panelTab==='habitos'?'on':''}">${svg('checksq')} Hábitos <span class="pt-c">${habitosCount}</span></button>
-      ${importantCount ? `<button data-ptab="importantes" class="imp-tab ${panelTab==='importantes'?'on':''}">${svg('star')} Importantes <span class="pt-c">${importantCount}</span></button>` : ''}
     </div>
-    <div class="panel-cols${importantCount ? ' has-imp' : ''}">
+    <div class="panel-cols">
       <section class="panel-col ${panelTab==='pagos'?'act':''}" data-col="pagos">
         <h3 class="panel-h">${svg('wallet')} Pagos <span>${money0(monthly, def)}/mes</span></h3>
         <div class="list" id="list-pagos"></div>
@@ -507,15 +511,13 @@ function renderInicio(v) {
         <h3 class="panel-h">${svg('checksq')} Hábitos</h3>
         <div class="list" id="list-habitos"></div>
       </section>
-      ${importantCount ? `<section class="panel-col imp-col ${panelTab==='importantes'?'act':''}" data-col="importantes">
-        <h3 class="panel-h">${svg('star')} Importantes <span>${importantCount}</span></h3>
-        <div class="list" id="list-importantes"></div>
-      </section>` : ''}
     </div>`;
 
   fill();
   const s = v.querySelector('#search');
   s.oninput = (e) => { searchQuery = e.target.value.trim().toLowerCase(); fill(); };
+  const impBtn = v.querySelector('#only-imp');
+  if (impBtn) impBtn.onclick = () => { onlyImportant = !onlyImportant; impBtn.classList.toggle('on', onlyImportant); fill(); };
   v.querySelectorAll('.panel-tabs button').forEach(b => b.onclick = () => {
     panelTab = b.dataset.ptab; setPref('ui.panel', panelTab);
     v.querySelectorAll('.panel-tabs button').forEach(x => x.classList.toggle('on', x.dataset.ptab === panelTab));
