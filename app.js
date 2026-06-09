@@ -278,11 +278,78 @@ const THEMES = [
   { key:'oceano',  label:'Océano',  sw:'#3f74a8', bg:'#eef2f6' },
 ];
 function applyTheme(name) {
-  const t = THEMES.find(x => x.key === name) ? name : 'marfil';
+  const isCustom = name === 'custom';
+  const t = isCustom ? 'custom' : (THEMES.find(x => x.key === name) ? name : 'marfil');
   document.body.dataset.theme = t;
   setPref('theme', t);
+  if (isCustom) applyCustomVars(getCustomTheme());
+  else clearCustomVars();
   const m = document.querySelector('meta[name="theme-color"]');
-  if (m) m.content = (THEMES.find(x => x.key === t) || {}).bg || '#f6f4ef';
+  if (m) m.content = isCustom ? getCustomTheme().bg : ((THEMES.find(x => x.key === t) || {}).bg || '#f6f4ef');
+}
+
+/* ---------- Tema personalizado ---------- */
+const CUSTOM_DEFAULTS = { bg:'#f6f4ef', panel:'#fffdf9', text:'#262420', dim:'#86827a', accent:'#c25c3c' };
+const CUSTOM_FIELDS = [
+  { k:'bg',     label:'Fondo' },
+  { k:'panel',  label:'Tarjetas' },
+  { k:'text',   label:'Texto' },
+  { k:'dim',    label:'Texto tenue' },
+  { k:'accent', label:'Acento' },
+];
+function getCustomTheme() {
+  try { return Object.assign({}, CUSTOM_DEFAULTS, JSON.parse(localStorage.getItem('loopapp.customTheme') || '{}')); }
+  catch (e) { return Object.assign({}, CUSTOM_DEFAULTS); }
+}
+function setCustomTheme(c) { localStorage.setItem('loopapp.customTheme', JSON.stringify(c)); }
+function _hex2rgb(h) { h = String(h).replace('#',''); if (h.length === 3) h = h.split('').map(x => x+x).join(''); const n = parseInt(h,16); return [(n>>16)&255,(n>>8)&255,n&255]; }
+function _rgb2hex(r,g,b) { const c = x => Math.max(0,Math.min(255,Math.round(x))).toString(16).padStart(2,'0'); return '#'+c(r)+c(g)+c(b); }
+function _mix(a,b,t) { const A=_hex2rgb(a), B=_hex2rgb(b); return _rgb2hex(A[0]+(B[0]-A[0])*t, A[1]+(B[1]-A[1])*t, A[2]+(B[2]-A[2])*t); }
+function applyCustomVars(c) {
+  const s = document.body.style;
+  s.setProperty('--bg', c.bg);
+  s.setProperty('--panel', c.panel);
+  s.setProperty('--text', c.text);
+  s.setProperty('--dim', c.dim);
+  s.setProperty('--accent', c.accent);
+  s.setProperty('--line',  _mix(c.text, c.bg, 0.82));   // 18% de texto sobre el fondo
+  s.setProperty('--line2', _mix(c.text, c.bg, 0.91));   // 9%
+  s.setProperty('--accent-soft', _mix(c.accent, '#000000', 0.12));
+  s.setProperty('--accent-tint', _mix(c.accent, c.bg, 0.84));   // 16% de acento
+  const [r,g,b] = _hex2rgb(c.bg);
+  s.colorScheme = (0.299*r + 0.587*g + 0.114*b) / 255 < 0.5 ? 'dark' : 'light';
+}
+function clearCustomVars() {
+  const s = document.body.style;
+  ['--bg','--panel','--text','--dim','--accent','--line','--line2','--accent-soft','--accent-tint'].forEach(k => s.removeProperty(k));
+  s.colorScheme = '';
+}
+/* Muestras de loops para la vista previa en vivo del editor de tema */
+function customPreviewLoops() {
+  const today = new Date();
+  const at = n => { const x = new Date(today); x.setDate(x.getDate() + n); return fmtDate(x); };
+  return [
+    { id:'_ct1', title:'Netflix',  icon:'tv',       category:'entertainment', amount:15.99, recurrence:'monthly', nextDate:at(4),  important:true, history:[] },
+    { id:'_ct2', title:'Alquiler', icon:'home',     category:'home',          amount:800,   recurrence:'monthly', nextDate:at(-1), history:[] },
+    { id:'_ct3', title:'Gimnasio', icon:'dumbbell', category:'health',        recurrence:'weekly',  nextDate:at(1),  history:[] },
+  ];
+}
+function customThemeEditor() {
+  const c = getCustomTheme();
+  const rows = CUSTOM_FIELDS.map(f =>
+    `<label class="ct-row"><span>${f.label}</span><input type="color" data-ck="${f.k}" value="${escapeAttr(c[f.k])}" /></label>`
+  ).join('');
+  const preview = `<div class="sum"><span class="red">● 1 vencido</span><span><b>$816</b> / mes</span></div>
+    <div class="list">${customPreviewLoops().map(rowHTML).join('')}</div>`;
+  return `<div class="custom-theme">
+    <p class="ct-hint">Toca cada color y mira cómo quedan tus loops aquí debajo, en vivo.</p>
+    <div class="ct-grid">${rows}</div>
+    <button class="opt" id="ct-reset">${svg('rotate')} Restablecer colores</button>
+    <div class="ct-preview-wrap">
+      <div class="ct-preview-tl">Vista previa del inicio</div>
+      <div class="ct-preview" id="ct-preview">${preview}</div>
+    </div>
+  </div>`;
 }
 const LAYOUTS = [{ key:'list', label:'Lista', icon:'list' }, { key:'comfy', label:'Cómodo', icon:'menu' }, { key:'cards', label:'Tarjetas', icon:'grid' }];
 function applyLayout(name) {
@@ -857,7 +924,10 @@ function renderAjustes(v) {
       <div class="swatches">
         ${THEMES.map(t => `<div class="swatch ${theme===t.key?'sel':''}" data-theme="${t.key}">
           <div class="sw" style="background:${t.bg};--swa:${t.sw}"></div><div class="lb">${t.label}</div></div>`).join('')}
+        <div class="swatch ${theme==='custom'?'sel':''}" data-theme="custom">
+          <div class="sw sw-custom"></div><div class="lb">Personalizado</div></div>
       </div>
+      ${theme==='custom' ? customThemeEditor() : ''}
     </div>
     <div class="themes">
       <h4>Diseño</h4>
@@ -908,6 +978,15 @@ function renderAjustes(v) {
     <div class="brk" id="brk-cuenta"><h4>Cuenta</h4></div>
     <p class="sub" style="text-align:center;margin:18px 16px 0;font-size:12px">Loopapp · tus datos se guardan en tu cuenta</p>`;
   v.querySelectorAll('.swatch').forEach(s => s.onclick = () => { applyTheme(s.dataset.theme); render(); });
+  v.querySelectorAll('.ct-row input[type=color]').forEach(inp => {
+    inp.oninput = () => {
+      const c = getCustomTheme(); c[inp.dataset.ck] = inp.value; setCustomTheme(c);
+      applyCustomVars(c);   // recolorea toda la pantalla (incluida la vista previa) al instante
+      const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = c.bg;
+    };
+  });
+  const ctReset = v.querySelector('#ct-reset');
+  if (ctReset) ctReset.onclick = () => { setCustomTheme(Object.assign({}, CUSTOM_DEFAULTS)); applyCustomVars(getCustomTheme()); render(); };
   v.querySelectorAll('.lay').forEach(b => b.onclick = () => { applyLayout(b.dataset.lay); render(); });
   v.querySelector('#p-cur').onchange = (e) => { setPref('currency', e.target.value); render(); };
   v.querySelector('#p-notify').onchange = (e) => { setPref('defaultNotify', String(Math.max(0, Math.min(60, parseInt(e.target.value) || 0)))); };
@@ -1148,7 +1227,7 @@ function buildBackup() {
   return {
     app: 'loopapp', version: 2, exportedAt: new Date().toISOString(),
     currency: pref('currency', 'USD'),
-    prefs: { defaultNotify: pref('defaultNotify','3'), defaultAuto: pref('defaultAuto','0'), theme: pref('theme','marfil'), layout: pref('layout','list') },
+    prefs: { defaultNotify: pref('defaultNotify','3'), defaultAuto: pref('defaultAuto','0'), theme: pref('theme','marfil'), layout: pref('layout','list'), customTheme: getCustomTheme() },
     cats: getUserCats(), done: getDone(), loops,
   };
 }
@@ -1164,6 +1243,7 @@ function applyBackup(data) {
   if (prefs) {
     if (prefs.defaultNotify != null) setPref('defaultNotify', String(prefs.defaultNotify));
     if (prefs.defaultAuto != null) setPref('defaultAuto', String(prefs.defaultAuto));
+    if (prefs.customTheme) setCustomTheme(prefs.customTheme);
     if (prefs.theme) applyTheme(prefs.theme);
     if (prefs.layout) applyLayout(prefs.layout);
   }

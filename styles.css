@@ -323,6 +323,25 @@ svg { display: block; }
 .swatch .sw::after { content: ""; position: absolute; right: 7px; bottom: 7px; width: 16px; height: 16px; border-radius: 50%; background: var(--swa); }
 .swatch.sel .sw { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-tint); }
 .swatch .lb { font-size: 11px; color: var(--dim); margin-top: 6px; font-weight: 600; }
+.swatch .sw-custom { background: conic-gradient(from 210deg, #c25c3c, #3f8f6f, #7c6bb0, #3f74a8, #c25c3c); }
+.swatch .sw-custom::after { background: #fff; border: 1px solid rgba(0,0,0,.15); }
+
+/* ---------- Editor de tema personalizado ---------- */
+.custom-theme { margin-top: 14px; border: 1px solid var(--line); border-radius: 16px; padding: 14px; background: var(--panel); }
+.ct-hint { font-size: 12.5px; color: var(--dim); margin: 0 0 12px; }
+.ct-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px 14px; }
+.ct-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13.5px; font-weight: 600; color: var(--text); }
+.ct-row input[type=color] { width: 40px; height: 30px; padding: 0; border: 1px solid var(--line); border-radius: 9px; background: none; cursor: pointer; flex: 0 0 auto; }
+.ct-row input[type=color]::-webkit-color-swatch-wrapper { padding: 2px; }
+.ct-row input[type=color]::-webkit-color-swatch { border: none; border-radius: 6px; }
+.custom-theme #ct-reset { margin-top: 12px; }
+.ct-preview-wrap { margin-top: 14px; }
+.ct-preview-tl { font-size: 11px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: var(--dim); margin-bottom: 8px; }
+.ct-preview { border: 1px solid var(--line); border-radius: 14px; background: var(--bg); padding: 6px 10px 10px; overflow: hidden; }
+.ct-preview .sum { margin: 8px 4px; }
+.ct-preview .list { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 0 8px; }
+.ct-preview .row { cursor: default; }
+.ct-preview .row:last-child { border-bottom: none; }
 
 /* ---------- Temas ---------- */
 body[data-theme="noche"] {
