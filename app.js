@@ -135,6 +135,7 @@ const ICONS = ['star','credit-card','landmark','wallet','tv','music','cloud','sm
 /* ---------- Estado de la app ---------- */
 let loops = load();
 let activeSection = pref('ui.section', 'inicio');
+let panelTab = pref('ui.panel', 'pagos');  // pagos | habitos (pestaña en móvil)
 let payFilter = pref('ui.pay', 'all');   // all | manual | auto | free
 let activeCategory = pref('ui.cat', 'all');
 let searchQuery = '';
@@ -431,6 +432,24 @@ function visibleLoops() {
     return daysUntil(a.nextDate) - daysUntil(b.nextDate);
   });
 }
+/* Orden por prioridad (vencidos/urgentes primero, luego por fecha) */
+function panelSort(list) {
+  return list.sort((a,b) => {
+    const sa = STATES[statusOf(a)].order, sb = STATES[statusOf(b)].order;
+    if (sa !== sb) return sa - sb;
+    return daysUntil(a.nextDate) - daysUntil(b.nextDate);
+  });
+}
+/* Rellena una columna (Pagos o Hábitos) con sus filas */
+function fillPanel(contId, list, emptyMsg) {
+  const cont = document.getElementById(contId); if (!cont) return;
+  if (!list.length) {
+    cont.innerHTML = `<div class="empty"><div class="em">${svg('repeat')}</div><p>${emptyMsg}</p></div>`;
+    return;
+  }
+  cont.innerHTML = list.map(rowHTML).join('');
+  bindRows(cont);
+}
 function renderInicio(v) {
   if (!loops.length) {
     v.innerHTML = `<div class="welcome">
@@ -448,37 +467,47 @@ function renderInicio(v) {
   const overdue = loops.filter(l => statusOf(l)==='overdue').length;
   const urgent = loops.filter(l => statusOf(l)==='urgent').length;
   const monthly = loops.filter(l => (l.currency||def)===def).reduce((s,l) => s + monthlyCost(l), 0);
-  const manuales = loops.filter(l => payType(l) === 'manual').length;
-  const seg = (k,t) => `<button class="${payFilter===k?'on':''}" data-pay="${k}">${t}</button>`;
-  const curCat = activeCategory === 'all' ? { label:'Todas las categorías', icon:'list' } : (CATEGORIES[activeCategory] || { label:'Todas las categorías', icon:'list' });
-  const catOpt = (key,label,icon) => `<button class="catopt ${activeCategory===key?'on':''}" data-cat="${key}">${svg(icon)} ${label}</button>`;
-  let catMenu = catOpt('all','Todas las categorías','list');
-  Object.keys(CATEGORIES).forEach(k => { catMenu += catOpt(k, CATEGORIES[k].label, CATEGORIES[k].icon); });
+  const isPago = l => payType(l) !== 'task';
+  const isHabito = l => payType(l) === 'task';
+  const pagosCount = loops.filter(isPago).length;
+  const habitosCount = loops.filter(isHabito).length;
+
+  const fill = () => {
+    const q = searchQuery, m = l => !q || l.title.toLowerCase().includes(q);
+    fillPanel('list-pagos', panelSort(loops.filter(l => isPago(l) && m(l))), q ? 'Sin resultados' : 'Aún no tienes pagos. Toca “Nuevo”.');
+    fillPanel('list-habitos', panelSort(loops.filter(l => isHabito(l) && m(l))), q ? 'Sin resultados' : 'Aún no tienes hábitos. Toca “Nuevo”.');
+  };
 
   v.innerHTML = `
     <div class="sum">
       ${overdue ? `<span class="red">● ${overdue} vencido${overdue>1?'s':''}</span>` : ''}
       ${urgent ? `<span>● ${urgent} urgente${urgent>1?'s':''}</span>` : ''}
       <span><b>${money0(monthly, def)}</b> / mes</span>
-      <span><b>${manuales}</b> manuales</span>
     </div>
-    <div class="filters">
-      <div class="catbar">
-        <button class="catsel" id="catsel" aria-haspopup="true">${svg(curCat.icon)}<span>${curCat.label}</span>${svg('chevron-down')}</button>
-        <div class="catmenu" id="catmenu" hidden>${catMenu}</div>
-      </div>
-      <div class="seg">${seg('all','Todos')}${seg('manual','Manuales')}${seg('auto','Automáticos')}${seg('free','Gratis')}</div>
-      <input id="search" class="search-input" type="search" placeholder="Buscar Loop…" autocomplete="off" value="${escapeAttr(searchQuery)}" />
+    <input id="search" class="search-input" type="search" placeholder="Buscar…" autocomplete="off" value="${escapeAttr(searchQuery)}" />
+    <div class="panel-tabs">
+      <button data-ptab="pagos" class="${panelTab==='pagos'?'on':''}">${svg('wallet')} Pagos <span class="pt-c">${pagosCount}</span></button>
+      <button data-ptab="habitos" class="${panelTab==='habitos'?'on':''}">${svg('checksq')} Hábitos <span class="pt-c">${habitosCount}</span></button>
     </div>
-    <div class="list" id="list"></div>`;
+    <div class="panel-cols">
+      <section class="panel-col ${panelTab==='pagos'?'act':''}" data-col="pagos">
+        <h3 class="panel-h">${svg('wallet')} Pagos <span>${money0(monthly, def)}/mes</span></h3>
+        <div class="list" id="list-pagos"></div>
+      </section>
+      <section class="panel-col ${panelTab==='habitos'?'act':''}" data-col="habitos">
+        <h3 class="panel-h">${svg('checksq')} Hábitos</h3>
+        <div class="list" id="list-habitos"></div>
+      </section>
+    </div>`;
 
-  const catsel = v.querySelector('#catsel'), catmenu = v.querySelector('#catmenu');
-  catsel.onclick = (e) => { e.stopPropagation(); catmenu.hidden = !catmenu.hidden; };
-  catmenu.querySelectorAll('.catopt').forEach(b => b.onclick = () => { activeCategory = b.dataset.cat; setPref('ui.cat', activeCategory); render(); });
-  v.querySelectorAll('.seg button').forEach(b => b.onclick = () => { payFilter = b.dataset.pay; setPref('ui.pay', payFilter); render(); });
+  fill();
   const s = v.querySelector('#search');
-  s.oninput = (e) => { searchQuery = e.target.value.trim().toLowerCase(); renderList(); };
-  renderList();
+  s.oninput = (e) => { searchQuery = e.target.value.trim().toLowerCase(); fill(); };
+  v.querySelectorAll('.panel-tabs button').forEach(b => b.onclick = () => {
+    panelTab = b.dataset.ptab; setPref('ui.panel', panelTab);
+    v.querySelectorAll('.panel-tabs button').forEach(x => x.classList.toggle('on', x.dataset.ptab === panelTab));
+    v.querySelectorAll('.panel-col').forEach(c => c.classList.toggle('act', c.dataset.col === panelTab));
+  });
 }
 function renderList() {
   const cont = document.getElementById('list'); if (!cont) return;
@@ -523,7 +552,7 @@ function rowHTML(loop) {
     </div>`;
 }
 function tickCountdowns() {
-  document.querySelectorAll('#list .row').forEach(r => {
+  document.querySelectorAll('.row[data-id]').forEach(r => {
     const loop = loops.find(l => l.id === r.dataset.id); if (!loop) return;
     const cd = cdParts(loop);
     const num = r.querySelector('.cd'), lab = r.querySelector('.cl'), bar = r.querySelector('.rowbar > i');

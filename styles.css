@@ -477,6 +477,32 @@ body[data-layout="cards"] .row:active { background: var(--panel); }
 }
 
 /* ===========================================================
+   Inicio: Pagos / Hábitos (lado a lado en desktop, pestañas en móvil)
+   =========================================================== */
+.panel-tabs { display: flex; gap: 6px; margin: 12px 16px 4px; }
+.panel-tabs button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  border: 1px solid var(--line); background: var(--panel); color: var(--dim);
+  padding: 11px; border-radius: 12px; font-size: 14px; font-weight: 700; font-family: inherit; cursor: pointer; }
+.panel-tabs button svg { width: 16px; height: 16px; }
+.panel-tabs button.on { background: var(--accent-tint); border-color: var(--accent); color: var(--accent); }
+.panel-tabs button.on svg { color: var(--accent); }
+.panel-tabs .pt-c { font-size: 12px; font-weight: 800; background: var(--bg); border-radius: 999px; padding: 1px 8px; }
+.panel-h { display: flex; align-items: center; gap: 8px; font-family: var(--serif); font-size: 17px; font-weight: 600; padding: 10px 20px 2px; }
+.panel-h svg { width: 18px; height: 18px; color: var(--accent); }
+.panel-h span { margin-left: auto; font-family: var(--sans); font-size: 12.5px; font-weight: 700; color: var(--dim); }
+/* Listas dentro de los paneles: siempre una sola columna */
+.panel-col .list { display: block !important; grid-template-columns: none !important; margin: 4px 6px 0; }
+/* Móvil: solo se ve la columna activa (la otra la oculta la pestaña) */
+.panel-col:not(.act) { display: none; }
+
+@media (min-width: 760px) {
+  .panel-tabs { display: none; }            /* en pantalla ancha no hacen falta pestañas */
+  .panel-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; align-items: start; }
+  .panel-col { display: block !important; } /* se muestran las dos a la vez */
+  .panel-h { padding-top: 4px; }
+}
+
+/* ===========================================================
    Pantalla de autenticación
    =========================================================== */
 #auth-screen {
