@@ -147,7 +147,6 @@ svg { display: block; }
 .row .right { text-align: right; flex: 0 0 auto; }
 .row .right .cd { font-family: var(--serif); font-size: 20px; font-weight: 600; color: var(--st); line-height: 1; font-variant-numeric: tabular-nums; }
 .row .right .cl { font-size: 11px; color: var(--dim); margin-top: 3px; }
-.row .right .amt { font-size: 12px; font-weight: 700; margin-top: 4px; }
 .chk { width: 27px; height: 27px; border-radius: 50%; border: 1.6px solid var(--line); flex: 0 0 auto;
   display: flex; align-items: center; justify-content: center; color: transparent; background: var(--panel); }
 .chk svg { width: 15px; height: 15px; }
@@ -515,18 +514,6 @@ body[data-layout="cards"] .row:active { background: var(--panel); }
 .data-info { font-size: 12.5px; color: var(--dim); padding: 2px 2px 10px; }
 
 /* ===========================================================
-   Filtros: categoría + búsqueda en la misma línea (tablet/desktop)
-   En teléfono se apilan como antes.
-   =========================================================== */
-.filters { display: flex; flex-direction: column; }
-@media (min-width: 760px) {
-  .filters { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 16px 4px; max-width: 760px; }
-  .filters .catbar { order: 1; flex: 1 1 240px; margin: 0; }
-  .filters .search-input { order: 2; flex: 1 1 240px; width: auto; margin: 0; }
-  .filters .seg { order: 3; flex: 0 0 100%; margin: 6px 0 2px; max-width: none; }
-}
-
-/* ===========================================================
    Inicio: buscador + categoría en la misma línea
    =========================================================== */
 .home-filters { display: flex; align-items: stretch; gap: 8px; margin: 10px 16px 2px; }
@@ -545,10 +532,6 @@ body[data-layout="cards"] .row:active { background: var(--panel); }
 /* ===========================================================
    Inicio: Pagos / Hábitos (lado a lado en desktop, pestañas en móvil)
    =========================================================== */
-/* Estrellita de "importante" junto al título */
-.row .t .imp { display: inline-flex; vertical-align: -2px; margin-right: 4px; }
-.row .t .imp svg { width: 14px; height: 14px; color: #f5a623; fill: #f5a623; }
-
 /* Botón estrella dentro de cada loop */
 .star-btn { width: 27px; height: 27px; border-radius: 50%; border: 1.6px solid var(--line); flex: 0 0 auto;
   display: inline-flex; align-items: center; justify-content: center; background: var(--panel); color: var(--dim);
@@ -925,7 +908,6 @@ const ICONS = ['star','credit-card','landmark','wallet','tv','music','cloud','sm
 let loops = load();
 let activeSection = pref('ui.section', 'inicio');
 let panelTab = pref('ui.panel', 'pagos');  // pagos | habitos (pestaña en móvil)
-let payFilter = pref('ui.pay', 'all');   // all | manual | auto | free
 let activeCategory = pref('ui.cat', 'all');
 let searchQuery = '';
 let calOffset = 0;
@@ -1115,11 +1097,14 @@ function applyCustomVars(c) {
   s.setProperty('--accent-soft', _mix(c.accent, '#000000', 0.12));
   s.setProperty('--accent-tint', _mix(c.accent, c.bg, 0.84));   // 16% de acento
   const [r,g,b] = _hex2rgb(c.bg);
-  s.colorScheme = (0.299*r + 0.587*g + 0.114*b) / 255 < 0.5 ? 'dark' : 'light';
+  const dark = (0.299*r + 0.587*g + 0.114*b) / 255 < 0.5;
+  s.colorScheme = dark ? 'dark' : 'light';
+  // Sombras más marcadas sobre fondos oscuros (si no, son casi invisibles)
+  s.setProperty('--shadow', dark ? '0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.4)' : '0 1px 2px rgba(38,36,32,.04), 0 10px 30px rgba(38,36,32,.07)');
 }
 function clearCustomVars() {
   const s = document.body.style;
-  ['--bg','--panel','--text','--dim','--accent','--line','--line2','--accent-soft','--accent-tint'].forEach(k => s.removeProperty(k));
+  ['--bg','--panel','--text','--dim','--accent','--line','--line2','--accent-soft','--accent-tint','--shadow'].forEach(k => s.removeProperty(k));
   s.colorScheme = '';
 }
 /* Muestras de loops para la vista previa en vivo del editor de tema */
@@ -1137,7 +1122,7 @@ function customThemeEditor() {
   const rows = CUSTOM_FIELDS.map(f =>
     `<label class="ct-row"><span>${f.label}</span><input type="color" data-ck="${f.k}" value="${escapeAttr(c[f.k])}" /></label>`
   ).join('');
-  const preview = `<div class="sum"><span class="red">● 1 vencido</span><span><b>$816</b> / mes</span></div>
+  const preview = `<div class="sum"><span class="red">● 1 vencido</span><span><b>${money0(816, pref('currency','USD'))}</b> / mes</span></div>
     <div class="list">${customPreviewLoops().map(rowHTML).join('')}</div>`;
   return `<div class="custom-theme">
     <p class="ct-hint">Toca cada color y mira cómo quedan tus loops aquí debajo, en vivo.</p>
@@ -1292,19 +1277,6 @@ function renderGreeting() {
 }
 
 /* ---------- INICIO ---------- */
-function visibleLoops() {
-  let list = loops.slice();
-  if (activeCategory !== 'all') list = list.filter(l => l.category === activeCategory);
-  if (payFilter === 'manual') list = list.filter(l => payType(l) === 'manual');
-  else if (payFilter === 'auto') list = list.filter(l => payType(l) === 'auto');
-  else if (payFilter === 'free') list = list.filter(l => payType(l) === 'task');
-  if (searchQuery) list = list.filter(l => l.title.toLowerCase().includes(searchQuery));
-  return list.sort((a,b) => {
-    const sa = STATES[statusOf(a)].order, sb = STATES[statusOf(b)].order;
-    if (sa !== sb) return sa - sb;
-    return daysUntil(a.nextDate) - daysUntil(b.nextDate);
-  });
-}
 /* Orden por prioridad (vencidos/urgentes primero, luego por fecha) */
 function panelSort(list) {
   return list.sort((a,b) => {
@@ -1411,25 +1383,6 @@ function renderInicio(v) {
     panelTab = b.dataset.ptab; setPref('ui.panel', panelTab);
     v.querySelectorAll('.panel-tabs button').forEach(x => x.classList.toggle('on', x.dataset.ptab === panelTab));
     v.querySelectorAll('.panel-col').forEach(c => c.classList.toggle('act', c.dataset.col === panelTab));
-  });
-}
-function renderList() {
-  const cont = document.getElementById('list'); if (!cont) return;
-  const list = visibleLoops();
-  if (!list.length) {
-    cont.innerHTML = `<div class="empty"><div class="em">${svg(searchQuery?'star':'repeat')}</div>
-      <h3>${searchQuery ? 'Sin resultados' : 'Nada por aquí'}</h3>
-      <p>${searchQuery ? 'Ningún Loop coincide.' : 'Toca “Nuevo” para agregar tu primer Loop.'}</p></div>`;
-    return;
-  }
-  cont.innerHTML = list.map(rowHTML).join('');
-  cont.querySelectorAll('.row').forEach(r => {
-    const id = r.dataset.id;
-    r.onclick = (e) => { if (!e.target.closest('.chk') && !e.target.closest('.star-btn')) openForm(loops.find(l => l.id === id)); };
-    const chk = r.querySelector('.chk');
-    if (chk) chk.onclick = () => markDone(id);
-    const star = r.querySelector('.star-btn');
-    if (star) star.onclick = (e) => { e.stopPropagation(); toggleImportant(id); };
   });
 }
 function toggleImportant(id) {
@@ -1809,7 +1762,7 @@ function renderAjustes(v) {
   v.querySelectorAll('.catedit').forEach(b => b.onclick = () => openCatForm(b.dataset.cat));
   v.querySelectorAll('.catdel').forEach(b => b.onclick = () => { if (confirm('¿Eliminar esta categoría? Los loops que la usen pasarán a "Otros".')) { removeUserCat(b.dataset.cat); render(); } });
   v.querySelector('#o-addcat').onclick = () => openCatForm();
-  v.querySelector('#o-ics').onclick = () => { if (!loops.length) { alert('No hay Loops que exportar.'); return; } downloadICS(loops, 'loopapp'); };
+  v.querySelector('#o-ics').onclick = () => { if (!loops.length) { alert('No hay Loops que exportar.'); return; } downloadICS(loops, 'loopkeeper'); };
   const subBtn = v.querySelector('#o-calsub'); if (subBtn) subBtn.onclick = enableCal;
   const calopen = v.querySelector('#o-calopen'); if (calopen) calopen.onclick = () => { location.href = webcalUrl(); };
   const calcopy = v.querySelector('#o-calcopy'); if (calcopy) calcopy.onclick = () => { const u = webcalUrl(); try { navigator.clipboard.writeText(u); } catch (e) { const i = v.querySelector('#o-calurl'); i.select(); document.execCommand('copy'); } calcopy.textContent = 'Copiado ✓'; };
@@ -1880,7 +1833,7 @@ function openForm(loop, opts) {
       <button type="button" class="switch ${data.autoPay?'on':''}" id="f-auto" aria-label="Pago automático"></button>
     </div></div>
     <div class="field"><div class="toggle-row">
-      <div><div class="tl">⭐ Importante</div><div class="ts">Sube al inicio de su lista y aparece en “Solo importantes”.</div></div>
+      <div><div class="tl">⭐ Importante</div><div class="ts">Sube al inicio de su lista y aparece en la pestaña “Importantes”.</div></div>
       <button type="button" class="switch ${data.important?'on':''}" id="f-imp" aria-label="Importante"></button>
     </div></div>
     <div class="field-row">
@@ -1997,24 +1950,28 @@ function applyAvatar() {
   const btn = document.getElementById('avatar'), inp = document.getElementById('avatar-file');
   if (!btn || !inp) return;
   btn.onclick = () => inp.click();
-  inp.onchange = () => {
+  // Redimensiona a 160x160 (recorte cuadrado centrado) para no llenar el almacenamiento
+  const draw = (src, w, h) => {
+    const S = 160, c = document.createElement('canvas'); c.width = c.height = S;
+    const ctx = c.getContext('2d');
+    const side = Math.min(w, h);
+    ctx.drawImage(src, (w - side) / 2, (h - side) / 2, side, side, 0, 0, S, S);
+    try { localStorage.setItem(AVATAR_KEY, c.toDataURL('image/jpeg', 0.85)); } catch (e) {}
+    applyAvatar();
+  };
+  inp.onchange = async () => {
     const file = inp.files && inp.files[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        // Redimensionamos a 160x160 (recorte cuadrado) para no llenar el almacenamiento
-        const S = 160, c = document.createElement('canvas'); c.width = c.height = S;
-        const ctx = c.getContext('2d');
-        const side = Math.min(img.width, img.height);
-        ctx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, S, S);
-        try { localStorage.setItem(AVATAR_KEY, c.toDataURL('image/jpeg', 0.85)); } catch (e) {}
-        applyAvatar();
-      };
-      img.src = reader.result;
-    };
-    reader.readAsDataURL(file);
     inp.value = '';
+    try {
+      // createImageBitmap respeta la orientación EXIF (fotos giradas en iOS)
+      const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+      draw(bmp, bmp.width, bmp.height);
+      if (bmp.close) bmp.close();
+    } catch (e) {
+      const reader = new FileReader();
+      reader.onload = () => { const img = new Image(); img.onload = () => draw(img, img.width, img.height); img.src = reader.result; };
+      reader.readAsDataURL(file);
+    }
   };
   applyAvatar();
 })();
@@ -2044,7 +2001,7 @@ function buildBackup() {
   return {
     app: 'loopapp', version: 2, exportedAt: new Date().toISOString(),
     currency: pref('currency', 'USD'),
-    prefs: { defaultNotify: pref('defaultNotify','3'), defaultAuto: pref('defaultAuto','0'), theme: pref('theme','marfil'), layout: pref('layout','list'), customTheme: getCustomTheme() },
+    prefs: { defaultNotify: pref('defaultNotify','3'), defaultAuto: pref('defaultAuto','0'), theme: pref('theme','marfil'), layout: pref('layout','list'), customTheme: getCustomTheme(), avatar: localStorage.getItem(AVATAR_KEY) || undefined },
     cats: getUserCats(), done: getDone(), loops,
   };
 }
@@ -2061,6 +2018,7 @@ function applyBackup(data) {
     if (prefs.defaultNotify != null) setPref('defaultNotify', String(prefs.defaultNotify));
     if (prefs.defaultAuto != null) setPref('defaultAuto', String(prefs.defaultAuto));
     if (prefs.customTheme) setCustomTheme(prefs.customTheme);
+    if (prefs.avatar) { localStorage.setItem(AVATAR_KEY, prefs.avatar); applyAvatar(); }
     if (prefs.theme) applyTheme(prefs.theme);
     if (prefs.layout) applyLayout(prefs.layout);
   }
@@ -2203,7 +2161,7 @@ function renderPhotoReview() {
 function exportData() {
   const blob = new Blob([JSON.stringify(buildBackup(), null, 2)], { type: 'application/json' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = `loopapp-backup-${fmtDate(todayMid())}.json`; a.click();
+  a.download = `loopkeeper-backup-${fmtDate(todayMid())}.json`; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 function copyBackup() {
@@ -2248,7 +2206,7 @@ function buildICS(list) {
 function downloadICS(list, name) {
   const blob = new Blob([buildICS(list)], { type: 'text/calendar;charset=utf-8' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = (name || 'loopapp') + '.ics'; a.click();
+  a.download = (name || 'loopkeeper') + '.ics'; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
@@ -2492,7 +2450,7 @@ async function renderCompartidos(v) {
     const st = STATES[statusOf(l)], cd = cdParts(l), cat = catOf(l);
     const badge = l._perm === 'edit' ? '<span class="tag auto">Puedes editar</span>' : '<span class="tag task">Solo ver</span>';
     const canCheck = l._perm === 'edit' && recurOf(l);
-    return `<div class="row" data-cid="${l.id}" style="--st:${st.color}">
+    return `<div class="row" data-cid="${l.id}" style="--st:${st.color};cursor:default">
       <div class="row-top">
         <span class="ic">${renderIcon(l.icon || cat.icon)}</span>
         <div class="mid"><div class="t">${escapeHtml(l.title)}</div>
@@ -2547,7 +2505,7 @@ function showUpgradeModal(reason) {
 async function startCheckout(interval) {
   const s = await ensureSession(); if (!s) { showAuthScreen(); return; }
   try {
-    const r = await fetch(`${SB.url}/functions/v1/create-checkout`, {
+    const r = await fetchTimeout(`${SB.url}/functions/v1/create-checkout`, {
       method: 'POST', headers: sbHeaders(), body: JSON.stringify({ interval })
     });
     const j = await r.json().catch(() => ({}));
@@ -2620,8 +2578,11 @@ async function setupPush() {
 }
 function checkDue() {
   if (!notifyEnabled()) return;
-  let sent = {}; try { sent = JSON.parse(localStorage.getItem(NOTIFY_SENT_KEY)) || {}; } catch (e) {}
+  let prev = {}; try { prev = JSON.parse(localStorage.getItem(NOTIFY_SENT_KEY)) || {}; } catch (e) {}
   const today = fmtDate(todayMid());
+  // Solo conservamos las claves de hoy: evita que el registro crezca sin fin.
+  const sent = {};
+  Object.keys(prev).forEach(k => { if (k.endsWith('@' + today)) sent[k] = true; });
   loops.forEach(l => {
     const st = statusOf(l);
     if (['overdue','urgent','upcoming'].includes(st)) {
@@ -2684,6 +2645,7 @@ function renderAuthScreen(tab) {
     const pwd = scr.querySelector('#auth-pwd').value;
     const btn = scr.querySelector('#auth-submit');
     if (!email || !pwd) { showErr('Completa todos los campos.'); return; }
+    if (tab === 'signup' && pwd.length < 6) { showErr('La contraseña debe tener al menos 6 caracteres.'); return; }
     btn.disabled = true; btn.textContent = '…'; errEl.hidden = true;
     try {
       if (tab === 'signin') { await signIn(email, pwd); }

@@ -130,7 +130,6 @@ svg { display: block; }
 .row .right { text-align: right; flex: 0 0 auto; }
 .row .right .cd { font-family: var(--serif); font-size: 20px; font-weight: 600; color: var(--st); line-height: 1; font-variant-numeric: tabular-nums; }
 .row .right .cl { font-size: 11px; color: var(--dim); margin-top: 3px; }
-.row .right .amt { font-size: 12px; font-weight: 700; margin-top: 4px; }
 .chk { width: 27px; height: 27px; border-radius: 50%; border: 1.6px solid var(--line); flex: 0 0 auto;
   display: flex; align-items: center; justify-content: center; color: transparent; background: var(--panel); }
 .chk svg { width: 15px; height: 15px; }
@@ -498,18 +497,6 @@ body[data-layout="cards"] .row:active { background: var(--panel); }
 .data-info { font-size: 12.5px; color: var(--dim); padding: 2px 2px 10px; }
 
 /* ===========================================================
-   Filtros: categoría + búsqueda en la misma línea (tablet/desktop)
-   En teléfono se apilan como antes.
-   =========================================================== */
-.filters { display: flex; flex-direction: column; }
-@media (min-width: 760px) {
-  .filters { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 16px 4px; max-width: 760px; }
-  .filters .catbar { order: 1; flex: 1 1 240px; margin: 0; }
-  .filters .search-input { order: 2; flex: 1 1 240px; width: auto; margin: 0; }
-  .filters .seg { order: 3; flex: 0 0 100%; margin: 6px 0 2px; max-width: none; }
-}
-
-/* ===========================================================
    Inicio: buscador + categoría en la misma línea
    =========================================================== */
 .home-filters { display: flex; align-items: stretch; gap: 8px; margin: 10px 16px 2px; }
@@ -528,10 +515,6 @@ body[data-layout="cards"] .row:active { background: var(--panel); }
 /* ===========================================================
    Inicio: Pagos / Hábitos (lado a lado en desktop, pestañas en móvil)
    =========================================================== */
-/* Estrellita de "importante" junto al título */
-.row .t .imp { display: inline-flex; vertical-align: -2px; margin-right: 4px; }
-.row .t .imp svg { width: 14px; height: 14px; color: #f5a623; fill: #f5a623; }
-
 /* Botón estrella dentro de cada loop */
 .star-btn { width: 27px; height: 27px; border-radius: 50%; border: 1.6px solid var(--line); flex: 0 0 auto;
   display: inline-flex; align-items: center; justify-content: center; background: var(--panel); color: var(--dim);
