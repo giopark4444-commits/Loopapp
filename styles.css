@@ -4,7 +4,7 @@
   --line: #e7e3d8;
   --line2: #efece3;
   --text: #262420;
-  --dim: #86827a;
+  --dim: #6f6b63;
   --accent: #c25c3c;
   --accent-soft: #ad4f33;
   --accent-tint: #f4e9e3;
@@ -55,6 +55,7 @@ svg { display: block; }
 .sum { padding: 12px 20px 2px; font-size: 13px; color: var(--dim); display: flex; gap: 14px; flex-wrap: wrap; }
 .sum b { color: var(--text); font-weight: 700; }
 .sum .red { color: var(--overdue); font-weight: 700; }
+.sum .sum-other { color: var(--dim); font-weight: 600; }
 
 /* ---------- Segmented filtro ---------- */
 .seg { display: flex; gap: 6px; margin: 14px 16px 4px; overflow-x: auto; scrollbar-width: none; }
@@ -372,6 +373,11 @@ body[data-theme="oceano"] {
 body { -webkit-tap-highlight-color: transparent; }
 .hd { padding-top: max(22px, env(safe-area-inset-top)); }
 
+/* Foco visible para navegación con teclado (a11y) */
+.nav a:focus-visible, .swatch:focus-visible, .cal-cell[data-date]:focus-visible,
+.iconbtn:focus-visible, .panel-tabs button:focus-visible, .catsel:focus-visible,
+.star-btn:focus-visible, .chk:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 /* ===========================================================
    TELÉFONO (base, < 760px) — táctil, una columna, menú deslizable
    El diseño base ya está optimizado para iPhone/Android:
@@ -571,9 +577,9 @@ body[data-layout="comfy"] .star-btn svg { width: 18px; height: 18px; }
   .home-toolbar .panel-tabs button { flex: 0 0 auto; padding: 10px 16px; }
   .home-toolbar .home-filters { order: 2; flex: 1 1 300px; margin: 0; }
   .home-toolbar .home-filters .catbar { width: auto; flex: 0 0 200px; }
-  /* Dashboard: las tres columnas (Pagos · Hábitos · Importantes) a la vez */
-  .panel-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px 24px; align-items: start; }
-  #view.searching .panel-cols { grid-template-columns: 1fr 1fr; }   /* al buscar, sin la 3ª */
+  /* Dashboard: columnas que se adaptan al ancho (2 en tablet, 3 en escritorio).
+     auto-fit colapsa las pistas vacías, así que al buscar (sin Importantes) no deja huecos. */
+  .panel-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px 24px; align-items: start; }
   .panel-col { display: block !important; }                          /* se muestran todas a la vez */
   .panel-col.act { background: var(--accent-tint); border-radius: 14px; padding-bottom: 8px; }   /* resalta la pestaña activa */
   .imp-col.act { background: rgba(245,166,35,.10); }

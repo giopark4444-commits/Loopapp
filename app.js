@@ -234,12 +234,12 @@ function nextCycle(loop) {
 function occursOn(loop, date) {
   const r = recurOf(loop), a = parseDate(loop.nextDate);
   if (!r) return fmtDate(date) === loop.nextDate;
-  if (r.unit === 'day') { const diff = Math.round((date - a) / 86400000); return diff % r.n === 0; }
-  if (r.unit === 'week') { const diff = Math.round((date - a) / 86400000); return diff % (7 * r.n) === 0; }
+  if (r.unit === 'day') { const diff = Math.round((date - a) / 86400000); return diff >= 0 && diff % r.n === 0; }
+  if (r.unit === 'week') { const diff = Math.round((date - a) / 86400000); return diff >= 0 && diff % (7 * r.n) === 0; }
   if (date.getDate() !== a.getDate()) return false;
   const md = (date.getFullYear() - a.getFullYear()) * 12 + (date.getMonth() - a.getMonth());
   const stepM = r.unit === 'month' ? r.n : 12 * r.n;
-  return md % stepM === 0;
+  return md >= 0 && md % stepM === 0;
 }
 /* ---------- Recurrencia flexible: { n, unit } ---------- */
 const UNIT_LABEL = { day: ['día','días'], week: ['semana','semanas'], month: ['mes','meses'], year: ['año','años'] };
@@ -382,7 +382,8 @@ function setDone(log) { localStorage.setItem(DONE_KEY, JSON.stringify(log)); }
 function logDone(loop) {
   const log = getDone();
   log.push({ id: loop.id, title: loop.title, icon: loop.icon, amount: loop.amount, category: loop.category,
-    recurrence: loop.recurrence, notifyDaysBefore: loop.notifyDaysBefore, autoPay: !!loop.autoPay, date: loop.nextDate, ts: Date.now() });
+    recurrence: loop.recurrence, recur: loop.recur, notes: loop.notes, currency: loop.currency, important: !!loop.important,
+    notifyDaysBefore: loop.notifyDaysBefore, autoPay: !!loop.autoPay, date: loop.nextDate, ts: Date.now() });
   setDone(log);
 }
 function markDone(id) {
@@ -404,7 +405,9 @@ function restoreDone(ts) {
     if (existing.history) { const hi = existing.history.lastIndexOf(e.date); if (hi >= 0) existing.history.splice(hi, 1); }
   } else {
     loops.push({ id: e.id || uid(), title: e.title, icon: e.icon, amount: e.amount, category: CATEGORIES[e.category] ? e.category : 'routine',
-      recurrence: RECURRENCE[e.recurrence] ? e.recurrence : 'none', nextDate: e.date, notifyDaysBefore: e.notifyDaysBefore ?? 3, autoPay: !!e.autoPay, history: [] });
+      recurrence: RECURRENCE[e.recurrence] ? e.recurrence : 'none', recur: (e.recur && e.recur.unit) ? e.recur : undefined,
+      nextDate: e.date, notifyDaysBefore: e.notifyDaysBefore ?? 3, autoPay: !!e.autoPay,
+      notes: e.notes || '', currency: e.currency, important: !!e.important, history: [] });
   }
   log.splice(i, 1); setDone(log);
   save(); render();
@@ -461,11 +464,15 @@ const SECTIONS = [
 function renderNav() {
   const nav = document.getElementById('nav');
   let html = SECTIONS.map(s =>
-    `<a data-sec="${s.key}" class="${activeSection===s.key?'act':''}">${svg(s.icon)} ${s.label}</a>`).join('');
+    `<a data-sec="${s.key}" role="button" tabindex="0" class="${activeSection===s.key?'act':''}">${svg(s.icon)} ${s.label}</a>`).join('');
   html += `<div class="sep"></div><small>Ajustes</small>
-    <a data-sec="ajustes" class="${activeSection==='ajustes'?'act':''}">${svg('sliders')} Datos y opciones</a>`;
+    <a data-sec="ajustes" role="button" tabindex="0" class="${activeSection==='ajustes'?'act':''}">${svg('sliders')} Datos y opciones</a>`;
   nav.innerHTML = html;
-  nav.querySelectorAll('a[data-sec]').forEach(a => a.onclick = () => { activeSection = a.dataset.sec; setPref('ui.section', activeSection); closeDrawer(); render(); });
+  nav.querySelectorAll('a[data-sec]').forEach(a => {
+    const go = () => { activeSection = a.dataset.sec; setPref('ui.section', activeSection); closeDrawer(); render(); };
+    a.onclick = go;
+    a.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } };
+  });
 }
 const drawer = () => document.getElementById('drawer');
 function openDrawer() { renderNav(); document.getElementById('scrim').hidden = false; drawer().classList.add('open'); }
@@ -544,6 +551,7 @@ function renderInicio(v) {
   const overdue = loops.filter(l => statusOf(l)==='overdue').length;
   const urgent = loops.filter(l => statusOf(l)==='urgent').length;
   const monthly = loops.filter(l => (l.currency||def)===def).reduce((s,l) => s + monthlyCost(l), 0);
+  const hasOtherCur = loops.some(l => l.amount && (l.currency||def) !== def);   // M8: hay montos en otra moneda
   const isPago = l => payType(l) !== 'task';
   const isHabito = l => payType(l) === 'task';
   const pagosCount = loops.filter(isPago).length;
@@ -557,8 +565,8 @@ function renderInicio(v) {
   Object.keys(CATEGORIES).forEach(k => { catMenu += catOpt(k, CATEGORIES[k].label, CATEGORIES[k].icon); });
 
   const fill = () => {
-    const q = searchQuery;
-    const norm = s => (s == null ? '' : String(s)).toLowerCase();
+    const q = foldText(searchQuery);   // M5: comparación sin distinguir acentos
+    const norm = s => foldText(s);
     const inCat = l => activeCategory === 'all' || l.category === activeCategory;
     const m = l => inCat(l) && (!q || norm(l.title).includes(q) || norm(l.notes).includes(q) || norm((CATEGORIES[l.category]||{}).label).includes(q));
     // al buscar, mostramos Pagos y Hábitos a la vez (no solo la pestaña activa)
@@ -573,7 +581,7 @@ function renderInicio(v) {
     <div class="sum">
       ${overdue ? `<span class="red">● ${overdue} vencido${overdue>1?'s':''}</span>` : ''}
       ${urgent ? `<span>● ${urgent} urgente${urgent>1?'s':''}</span>` : ''}
-      <span><b>${money0(monthly, def)}</b> / mes</span>
+      <span><b>${money0(monthly, def)}</b> / mes${hasOtherCur ? ' · <span class="sum-other">+ otras monedas</span>' : ''}</span>
     </div>
     <div class="home-toolbar">
       <div class="panel-tabs">
@@ -715,7 +723,7 @@ function calCellHTML(date, todayStr) {
   const colors = items.slice(0, 6).map(l => STATES[statusOf(l)].color);
   const filled = colors.length > 0;
   const style = filled ? ` style="background:${cellBg(colors)}"` : '';
-  return `<div class="cal-cell ${ds===todayStr?'today':''} ${filled?'filled':''} ${ds===selectedDay?'sel':''}" data-date="${ds}"${style}><span class="dn">${date.getDate()}</span></div>`;
+  return `<div class="cal-cell ${ds===todayStr?'today':''} ${filled?'filled':''} ${ds===selectedDay?'sel':''}" data-date="${ds}" role="button" tabindex="0" aria-label="${date.getDate()}${items.length?` · ${items.length} loop${items.length>1?'s':''}`:''}"${style}><span class="dn">${date.getDate()}</span></div>`;
 }
 function dayDetailHTML() {
   if (!selectedDay) return '';
@@ -738,7 +746,7 @@ function calMonth() {
   ['L','M','X','J','V','S','D'].forEach(d => cells += `<div class="cal-dow">${d}</div>`);
   for (let i = 0; i < firstDow; i++) cells += `<div class="cal-cell empty"></div>`;
   for (let day = 1; day <= days; day++) cells += calCellHTML(new Date(year, month, day), todayStr);
-  return `<div class="cal-head"><button class="iconbtn" id="cprev">${svg('chevron-left')}</button><h3>${monthName}</h3><button class="iconbtn" id="cnext">${svg('chevron-right')}</button></div><div class="cal-grid">${cells}</div>${dayDetailHTML()}`;
+  return `<div class="cal-head"><button class="iconbtn" id="cprev" aria-label="Mes anterior">${svg('chevron-left')}</button><h3>${monthName}</h3><button class="iconbtn" id="cnext" aria-label="Mes siguiente">${svg('chevron-right')}</button></div><div class="cal-grid">${cells}</div>${dayDetailHTML()}`;
 }
 function calWeek() {
   const today = todayMid();
@@ -749,7 +757,7 @@ function calWeek() {
   let cells = '';
   ['L','M','X','J','V','S','D'].forEach(d => cells += `<div class="cal-dow">${d}</div>`);
   for (let i = 0; i < 7; i++) { const dt = new Date(monday); dt.setDate(monday.getDate() + i); cells += calCellHTML(dt, todayStr); }
-  return `<div class="cal-head"><button class="iconbtn" id="cprev">${svg('chevron-left')}</button><h3 style="text-transform:none">${title}</h3><button class="iconbtn" id="cnext">${svg('chevron-right')}</button></div><div class="cal-grid">${cells}</div>${dayDetailHTML()}`;
+  return `<div class="cal-head"><button class="iconbtn" id="cprev" aria-label="Semana anterior">${svg('chevron-left')}</button><h3 style="text-transform:none">${title}</h3><button class="iconbtn" id="cnext" aria-label="Semana siguiente">${svg('chevron-right')}</button></div><div class="cal-grid">${cells}</div>${dayDetailHTML()}`;
 }
 function calAgenda() {
   const today = todayMid();
@@ -774,7 +782,11 @@ function renderCalendario(v) {
   v.querySelectorAll('.seg button[data-cv]').forEach(b => b.onclick = () => { calView = b.dataset.cv; setPref('ui.calview', calView); render(); });
   if (calView === 'month') { v.querySelector('#cprev').onclick = () => { calOffset--; render(); }; v.querySelector('#cnext').onclick = () => { calOffset++; render(); }; }
   if (calView === 'week') { v.querySelector('#cprev').onclick = () => { weekOffset--; render(); }; v.querySelector('#cnext').onclick = () => { weekOffset++; render(); }; }
-  if (calView !== 'agenda') v.querySelectorAll('.cal-cell[data-date]').forEach(c => c.onclick = () => { selectedDay = (selectedDay === c.dataset.date) ? null : c.dataset.date; render(); });
+  if (calView !== 'agenda') v.querySelectorAll('.cal-cell[data-date]').forEach(c => {
+    const sel = () => { selectedDay = (selectedDay === c.dataset.date) ? null : c.dataset.date; render(); };
+    c.onclick = sel;
+    c.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); sel(); } };
+  });
   const add = v.querySelector('#dd-add'); if (add) add.onclick = () => openForm(null, { date: selectedDay });
   bindRows(v);
 }
@@ -932,9 +944,9 @@ function renderAjustes(v) {
     <div class="themes">
       <h4>Tema</h4>
       <div class="swatches">
-        ${THEMES.map(t => `<div class="swatch ${theme===t.key?'sel':''}" data-theme="${t.key}">
+        ${THEMES.map(t => `<div class="swatch ${theme===t.key?'sel':''}" data-theme="${t.key}" role="button" tabindex="0" aria-label="Tema ${t.label}">
           <div class="sw" style="background:${t.bg};--swa:${t.sw}"></div><div class="lb">${t.label}</div></div>`).join('')}
-        <div class="swatch ${theme==='custom'?'sel':''}" data-theme="custom">
+        <div class="swatch ${theme==='custom'?'sel':''}" data-theme="custom" role="button" tabindex="0" aria-label="Tema personalizado">
           <div class="sw sw-custom"></div><div class="lb">Personalizado</div></div>
       </div>
       ${theme==='custom' ? customThemeEditor() : ''}
@@ -987,7 +999,11 @@ function renderAjustes(v) {
       <button class="opt danger" id="o-reset">${svg('rotate')} Restablecer datos de ejemplo</button></div>
     <div class="brk" id="brk-cuenta"><h4>Cuenta</h4></div>
     <p class="sub" style="text-align:center;margin:18px 16px 0;font-size:12px">Loopkeeper · tus datos se guardan en tu cuenta</p>`;
-  v.querySelectorAll('.swatch').forEach(s => s.onclick = () => { applyTheme(s.dataset.theme); render(); });
+  v.querySelectorAll('.swatch').forEach(s => {
+    const pick = () => { applyTheme(s.dataset.theme); render(); };
+    s.onclick = pick;
+    s.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } };
+  });
   v.querySelectorAll('.ct-row input[type=color]').forEach(inp => {
     inp.oninput = () => {
       const c = getCustomTheme(); c[inp.dataset.ck] = inp.value; setCustomTheme(c);
@@ -1171,6 +1187,8 @@ function openCatForm(edit) {
 /* ---------- Helpers HTML-safe ---------- */
 function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
 function escapeAttr(s) { return escapeHtml(s); }
+/* Normaliza texto para búsqueda: minúsculas y sin acentos (café == cafe) */
+function foldText(s) { return (s == null ? '' : String(s)).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
 
 /* ============================================================
    Eventos globales
@@ -1906,10 +1924,10 @@ async function boot() {
   document.querySelectorAll('[data-ico]').forEach(el => el.insertAdjacentHTML('afterbegin', svg(el.dataset.ico)));
   const s = await ensureSession();
   if (!s) { showAuthScreen(); return; }
-  await loadPlan();
-  await syncDown();
-  render();
+  render();        // pinta de inmediato con los datos locales (no esperamos a la red)
   checkDue();
+  loadPlan();      // en segundo plano: actualiza el plan
+  syncDown();      // en segundo plano: re-renderiza al terminar si hay cambios
   setInterval(() => { if ((activeSection === 'inicio' || activeSection === 'loops') && document.getElementById('modal-overlay').hidden) tickCountdowns(); }, 1000);
   setInterval(() => { checkDue(); }, 60000);
 }
