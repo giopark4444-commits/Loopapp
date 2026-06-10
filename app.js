@@ -214,11 +214,20 @@ function cdParts(loop) {
 function nextCycle(loop) {
   const r = recurOf(loop); if (!r) return null;
   const d = parseDate(loop.nextDate), today = todayMid();
+  const origDay = d.getDate();
+  // Avanza n meses conservando el día original, recortando al último día si el mes es más corto
+  // (ej. un pago el 31 de enero → 28/29 feb → 31 mar, sin desbordar al mes siguiente).
+  const addMonths = (n) => {
+    d.setDate(1);
+    d.setMonth(d.getMonth() + n);
+    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    d.setDate(Math.min(origDay, lastDay));
+  };
   do {
     if (r.unit === 'day') d.setDate(d.getDate() + r.n);
     else if (r.unit === 'week') d.setDate(d.getDate() + 7 * r.n);
-    else if (r.unit === 'month') d.setMonth(d.getMonth() + r.n);
-    else d.setFullYear(d.getFullYear() + r.n);
+    else if (r.unit === 'month') addMonths(r.n);
+    else addMonths(12 * r.n);
   } while (d <= today);
   return fmtDate(d);
 }
@@ -381,7 +390,8 @@ function markDone(id) {
   logDone(loop);
   const next = nextCycle(loop);
   loop.history = loop.history || []; loop.history.push(loop.nextDate);
-  if (next) loop.nextDate = next; else loops = loops.filter(l => l.id !== id);
+  if (next) loop.nextDate = next;
+  else { loops = loops.filter(l => l.id !== id); if (getSession()) serverDeleteLoop(id); }   // sin recurrencia: borrar también del servidor para que no reaparezca
   save(); render();
 }
 /* Restaurar un check (deshacer): regresa el Loop a su fecha original */
@@ -785,7 +795,7 @@ function renderFinanzas(v) {
   const byCat = {}; inPrim.forEach(l => { byCat[l.category] = (byCat[l.category] || 0) + monthlyCost(l); });
   const maxCat = Math.max(1, ...Object.values(byCat));
   const catRows = Object.entries(byCat).sort((a,b) => b[1]-a[1]).map(([k,val]) => `
-    <div class="brk-row"><span class="bn">${svg(CATEGORIES[k].icon)} ${CATEGORIES[k].label}</span><span class="bv">${money0(val, primary)}</span></div>
+    <div class="brk-row"><span class="bn">${svg(CATEGORIES[k].icon)} ${escapeHtml(CATEGORIES[k].label)}</span><span class="bv">${money0(val, primary)}</span></div>
     <div class="bar"><i style="width:${Math.round(val/maxCat*100)}%"></i></div>`).join('');
   const curRows = curs.length > 1 ? `<div class="brk"><h4>Por moneda / mes</h4>${
     curs.sort((a,b) => byCur[b]-byCur[a]).map(c => `<div class="brk-row"><span class="bn">${c} ${CURRENCIES[c] || ''}</span><span class="bv">${money0(byCur[c], c)} · ${money0(byCur[c]*12, c)}/año</span></div>`).join('')
@@ -849,7 +859,7 @@ function renderStats(v) {
   const doneThisMonth = dload.length ? dload[dload.length-1].count : 0;
   const ins = [];
   if (nextL) { const d = daysUntil(nextL.nextDate); ins.push({ icon:'clock', t:`Lo próximo: <b>${escapeHtml(nextL.title)}</b> ${d<0?'<span class="ins-bad">vencido</span>':d===0?'hoy':d===1?'mañana':`en ${d} días`}` }); }
-  if (topCat) { const c = CATEGORIES[topCat[0]] || CATEGORIES.other; ins.push({ icon:c.icon, t:`Tu mayor gasto: <b>${c.label}</b> · ${money0(topCat[1],primary)}/mes` }); }
+  if (topCat) { const c = CATEGORIES[topCat[0]] || CATEGORIES.other; ins.push({ icon:c.icon, t:`Tu mayor gasto: <b>${escapeHtml(c.label)}</b> · ${money0(topCat[1],primary)}/mes` }); }
   if (streak > 0) ins.push({ icon:'flame', t:`Racha de <b>${streak}</b> a tiempo seguido${streak>1?'s':''}` });
   if (busiest && busiest.count) ins.push({ icon:'calendar', t:`Mes más cargado: <b style="text-transform:capitalize">${busiest.label}</b> · ${busiest.count} vencimientos` });
   if (monthlySpend) ins.push({ icon:'wallet', t:`Proyección 12 meses: <b>${money0(monthlySpend*12,primary)}</b>${curs.length>1?' · '+primary:''}` });
@@ -945,7 +955,7 @@ function renderAjustes(v) {
     </div>
     <div class="brk"><h4>Categorías</h4>
       <div class="catlist">
-        ${Object.keys(CATEGORIES).map(k => `<div class="catrow">${svg(CATEGORIES[k].icon)}<span>${CATEGORIES[k].label}</span>${CATEGORIES[k].custom ? `<button class="catedit" data-cat="${k}" aria-label="Editar">${svg('pencil')}</button><button class="catdel" data-cat="${k}" aria-label="Eliminar">${svg('trash')}</button>` : ''}</div>`).join('')}
+        ${Object.keys(CATEGORIES).map(k => `<div class="catrow">${svg(CATEGORIES[k].icon)}<span>${escapeHtml(CATEGORIES[k].label)}</span>${CATEGORIES[k].custom ? `<button class="catedit" data-cat="${k}" aria-label="Editar">${svg('pencil')}</button><button class="catdel" data-cat="${k}" aria-label="Eliminar">${svg('trash')}</button>` : ''}</div>`).join('')}
       </div>
       <button class="opt" id="o-addcat">${svg('plus')} Agregar categoría</button>
     </div>
@@ -1035,7 +1045,7 @@ function openForm(loop, opts) {
     <h2>${isEdit ? 'Editar Loop' : 'Nuevo Loop'}</h2>
     <p class="modal-sub">Todo lo que se repite: una fecha, una prioridad, una cuenta regresiva.</p>
     <div class="field"><label>Categoría</label><div class="cat-picker" id="cat-picker">
-      ${Object.entries(CATEGORIES).map(([k,c]) => `<button data-cat="${k}" class="${data.category===k?'sel':''}">${svg(c.icon)} ${c.label}</button>`).join('')}
+      ${Object.entries(CATEGORIES).map(([k,c]) => `<button data-cat="${k}" class="${data.category===k?'sel':''}">${svg(c.icon)} ${escapeHtml(c.label)}</button>`).join('')}
     </div></div>
     <div class="field"><label>Nombre</label><input id="f-title" placeholder="Ej. Netflix, Alquiler, Regar plantas" value="${escapeAttr(data.title)}" /></div>
     <div class="field"><label>Icono</label><div class="icon-picker" id="icon-picker">
@@ -1458,8 +1468,12 @@ async function ensureSession() {
         body: JSON.stringify({ refresh_token: s.refresh_token })
       });
       if (r.ok) { const ns = await r.json(); setSession({ ...ns, user: ns.user || s.user }); return getSession(); }
-    } catch(e) {}
-    clearSession(); return null;
+      // El servidor respondió y rechazó el refresh token → sesión realmente inválida
+      clearSession(); return null;
+    } catch(e) {
+      // Error de red (sin conexión): conservamos la sesión local y seguimos en modo offline
+      return s;
+    }
   }
   return s;
 }
