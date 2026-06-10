@@ -1976,7 +1976,12 @@ function applyAvatar() {
   applyAvatar();
 })();
 document.getElementById('scrim').onclick = closeDrawer;
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeDrawer(); } });
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  const ov = document.getElementById('modal-overlay');
+  if (ov && !ov.hidden) { ov.hidden = true; return; }   // cierra el modal si está abierto
+  closeDrawer();
+});
 document.addEventListener('click', (e) => {
   const m = document.getElementById('catmenu'), s = document.getElementById('catsel');
   if (m && !m.hidden && s && !m.contains(e.target) && !s.contains(e.target)) m.hidden = true;
@@ -2306,11 +2311,15 @@ async function loadPlan() {
 /* -- Sync servidor -- */
 async function syncDown() {
   const s = await ensureSession(); if (!s || !SB.url) return;
+  const before = JSON.stringify(loops);   // foto de lo local ANTES de la red
   try {
     const r = await fetch(`${SB.url}/rest/v1/loops?owner_id=eq.${s.user.id}&select=client_id,data`, { headers: sbHeaders() });
     if (!r.ok) return;
     const rows = await r.json();
     if (rows.length === 0) { if (loops.length > 0) await syncUp(); return; }
+    // Si el usuario tocó algo mientras descargábamos (arranque sin esperar a la red),
+    // no pisamos su cambio: subimos lo local y dejamos que se reconcilie.
+    if (JSON.stringify(loops) !== before) { syncUp(); return; }
     loops = rows.map(row => ({ ...row.data, id: row.client_id }));
     localStorage.setItem(STORE_KEY, JSON.stringify(loops));
     render();
