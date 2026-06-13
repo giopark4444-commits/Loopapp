@@ -1,0 +1,47 @@
+# ── Secretos y variables de entorno — NUNCA subir ──
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+*.secret
+*.key
+.openai_key
+
+# NOTA: config.js NO se ignora a propósito — contiene solo claves PÚBLICAS
+# (Supabase anon key + VAPID public) que la app necesita en el navegador.
+
+# ── Datos de negocio / privados ──
+*.xlsx
+*.xls
+
+# ── Dependencias ──
+node_modules/
+.pnp
+.pnp.js
+
+# ── Builds y caché ──
+dist/
+build/
+out/
+.cache/
+.vite/
+.vercel/
+
+# ── macOS ──
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# ── Editores ──
+.vscode/
+.idea/
+.cursor/
+*.swp
+*.swo
+*~
+
+# ── Logs ──
+*.log
+npm-debug.log*
