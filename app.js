@@ -549,7 +549,7 @@ function renderInicio(v) {
 
   // Selector de categorías (junto al buscador): filtra las tres columnas
   const curCat = activeCategory === 'all' ? { label:'Categorías', icon:'list' } : (CATEGORIES[activeCategory] || { label:'Categorías', icon:'list' });
-  const catOpt = (key,label,icon) => `<button class="catopt ${activeCategory===key?'on':''}" data-cat="${key}">${svg(icon)} ${escapeHtml(label)}</button>`;
+  const catOpt = (key,label,icon) => `<button class="catopt ${activeCategory===key?'on':''}" data-cat="${escapeAttr(key)}">${svg(icon)} ${escapeHtml(label)}</button>`;
   let catMenu = catOpt('all','Todas las categorías','list');
   Object.keys(CATEGORIES).forEach(k => { catMenu += catOpt(k, CATEGORIES[k].label, CATEGORIES[k].icon); });
 
@@ -625,7 +625,7 @@ function rowHTML(loop) {
   const tag = pt === 'auto' ? '<span class="tag auto">Auto</span>' : pt === 'task' ? '<span class="tag task">Tarea</span>' : '<span class="tag manual">Manual</span>';
   const meta = `${tag} ${recurLabel(loop)}${loop.amount ? ' · ' + amtLabel(loop) : ''}`;
   return `
-    <div class="row" data-id="${loop.id}" style="--st:${st.color}">
+    <div class="row" data-id="${escapeAttr(loop.id)}" style="--st:${st.color}">
       <div class="row-top">
         <span class="ic">${renderIcon(loop.icon || cat.icon)}</span>
         <div class="mid">
@@ -780,7 +780,7 @@ function renderFinanzas(v) {
     <div class="brk-row"><span class="bn">${svg(CATEGORIES[k].icon)} ${escapeHtml(CATEGORIES[k].label)}</span><span class="bv">${money0(val, primary)}</span></div>
     <div class="bar"><i style="width:${Math.round(val/maxCat*100)}%"></i></div>`).join('');
   const curRows = curs.length > 1 ? `<div class="brk"><h4>Por moneda / mes</h4>${
-    curs.sort((a,b) => byCur[b]-byCur[a]).map(c => `<div class="brk-row"><span class="bn">${c} ${CURRENCIES[c] || ''}</span><span class="bv">${money0(byCur[c], c)} · ${money0(byCur[c]*12, c)}/año</span></div>`).join('')
+    curs.sort((a,b) => byCur[b]-byCur[a]).map(c => `<div class="brk-row"><span class="bn">${escapeHtml(c)} ${CURRENCIES[c] || ''}</span><span class="bv">${money0(byCur[c], c)} · ${money0(byCur[c]*12, c)}/año</span></div>`).join('')
   }</div>` : '';
   const topRows = inPrim.slice().sort((a,b) => monthlyCost(b) - monthlyCost(a)).slice(0, 5)
     .map(l => `<div class="brk-row"><span class="bn">${svg(catOf(l).icon)} ${escapeHtml(l.title)}</span><span class="bv">${money0(monthlyCost(l), primary)}/mes</span></div>`).join('');
@@ -937,7 +937,7 @@ function renderAjustes(v) {
     </div>
     <div class="brk"><h4>Categorías</h4>
       <div class="catlist">
-        ${Object.keys(CATEGORIES).map(k => `<div class="catrow">${svg(CATEGORIES[k].icon)}<span>${escapeHtml(CATEGORIES[k].label)}</span>${CATEGORIES[k].custom ? `<button class="catedit" data-cat="${k}" aria-label="Editar">${svg('pencil')}</button><button class="catdel" data-cat="${k}" aria-label="Eliminar">${svg('trash')}</button>` : ''}</div>`).join('')}
+        ${Object.keys(CATEGORIES).map(k => `<div class="catrow">${svg(CATEGORIES[k].icon)}<span>${escapeHtml(CATEGORIES[k].label)}</span>${CATEGORIES[k].custom ? `<button class="catedit" data-cat="${escapeAttr(k)}" aria-label="Editar">${svg('pencil')}</button><button class="catdel" data-cat="${escapeAttr(k)}" aria-label="Eliminar">${svg('trash')}</button>` : ''}</div>`).join('')}
       </div>
       <button class="opt" id="o-addcat">${svg('plus')} Agregar categoría</button>
     </div>
@@ -1038,7 +1038,7 @@ function openForm(loop, opts) {
       ${ICONS.map(i => `<button data-icon="${i}" class="${data.icon===i?'sel':''}" title="${i}">${svg(i)}</button>`).join('')}
     </div></div>
     <div class="field-row">
-      <div class="field"><label>Monto (opcional)</label><input id="f-amount" type="number" step="0.01" min="0" placeholder="0.00" value="${data.amount ?? ''}" /></div>
+      <div class="field"><label>Monto (opcional)</label><input id="f-amount" type="number" step="0.01" min="0" placeholder="0.00" value="${escapeAttr(data.amount ?? '')}" /></div>
       <div class="field"><label>Moneda</label><select id="f-cur">
         ${Object.keys(CURRENCIES).map(c => `<option value="${c}" ${(data.currency || pref('currency','USD'))===c?'selected':''}>${c} ${CURRENCIES[c]}</option>`).join('')}
       </select></div>
@@ -1065,7 +1065,7 @@ function openForm(loop, opts) {
       <button type="button" class="switch ${data.important?'on':''}" id="f-imp" aria-label="Importante"></button>
     </div></div>
     <div class="field-row">
-      <div class="field"><label>Próxima fecha</label><input id="f-date" type="date" value="${data.nextDate}" /></div>
+      <div class="field"><label>Próxima fecha</label><input id="f-date" type="date" value="${escapeAttr(data.nextDate)}" /></div>
       <div class="field"><label>Avisar (días antes)</label><input id="f-notify" type="number" min="0" max="60" value="${data.notifyDaysBefore ?? 3}" /></div>
     </div>
     <div class="field"><label>Notas (opcional)</label><textarea id="f-notes" rows="2" placeholder="Ej. número de cuenta, recordatorio, link…">${escapeHtml(data.notes || '')}</textarea></div>
@@ -1171,7 +1171,9 @@ const AVATAR_KEY = 'loopapp.avatar';
 function applyAvatar() {
   const el = document.getElementById('avatar'); if (!el) return;
   const data = localStorage.getItem(AVATAR_KEY);
-  if (data) { el.style.backgroundImage = `url("${data}")`; el.classList.add('has-img'); }
+  // Solo aceptar data-URIs de imagen (la app siempre genera data:image/jpeg vía canvas).
+  // Evita inyección en el contexto CSS url(...) desde un respaldo importado manipulado.
+  if (data && /^data:image\//.test(data)) { el.style.backgroundImage = `url("${data.replace(/["\\)]/g, '')}")`; el.classList.add('has-img'); }
   else { el.style.backgroundImage = ''; el.classList.remove('has-img'); }
 }
 (() => {
@@ -1687,14 +1689,14 @@ async function renderCompartidos(v) {
     const st = STATES[statusOf(l)], cd = cdParts(l), cat = catOf(l);
     const badge = l._perm === 'edit' ? '<span class="tag auto">Puedes editar</span>' : '<span class="tag task">Solo ver</span>';
     const canCheck = l._perm === 'edit' && recurOf(l);
-    return `<div class="row" data-cid="${l.id}" style="--st:${st.color};cursor:default">
+    return `<div class="row" data-cid="${escapeAttr(l.id)}" style="--st:${st.color};cursor:default">
       <div class="row-top">
         <span class="ic">${renderIcon(l.icon || cat.icon)}</span>
         <div class="mid"><div class="t">${escapeHtml(l.title)}</div>
           <div class="m">${badge} ${recurLabel(l)}${l.amount ? ' · ' + amtLabel(l) : ''}</div>
           ${l.notes ? `<div class="note">${escapeHtml(l.notes)}</div>` : ''}</div>
         <div class="right"><div class="cd">${cd.big}</div><div class="cl">${cd.cl}</div></div>
-        ${canCheck ? `<button class="chk" data-cid="${l.id}" title="Marcar ${l.amount ? 'pagado' : 'hecho'}">${svg('check')}</button>` : ''}
+        ${canCheck ? `<button class="chk" data-cid="${escapeAttr(l.id)}" title="Marcar ${l.amount ? 'pagado' : 'hecho'}">${svg('check')}</button>` : ''}
       </div>
       <div class="rowbar"><i style="width:${cd.pct}%"></i></div>
     </div>`;

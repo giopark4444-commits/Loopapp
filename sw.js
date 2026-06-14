@@ -41,7 +41,10 @@ self.addEventListener('fetch', (e) => {
     caches.open(CACHE).then(async (cache) => {
       const cached = await cache.match(e.request);
       const network = fetch(e.request).then((res) => {
-        cache.put(e.request, res.clone()).catch(() => {});
+        // Solo cachear respuestas válidas y propias (same-origin, status 200).
+        // Evita "envenenar" la caché con errores (404/500) o redirecciones que
+        // luego se servirían como app shell offline.
+        if (res && res.ok && res.type === 'basic') cache.put(e.request, res.clone()).catch(() => {});
         return res;
       }).catch(() => null);
       return cached || (await network) || fetch(e.request);
