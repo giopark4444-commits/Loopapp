@@ -275,7 +275,7 @@ function setPref(k, v) { localStorage.setItem('loopapp.' + k, v); }
 function symOf(code) { return CURRENCIES[code] || CURRENCIES[pref('currency','USD')] || '$'; }
 function money(n, code) { return symOf(code) + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function money0(n, code) { return symOf(code) + Math.round(Number(n)).toLocaleString('en-US'); }
-function amtLabel(loop) { if (!loop.amount) return ''; const def = pref('currency','USD'); const code = loop.currency || def; const m = money(loop.amount, code); return code !== def ? m + ' ' + code : m; }
+function amtLabel(loop) { if (!loop.amount) return ''; const def = pref('currency','USD'); const code = loop.currency || def; const m = money(loop.amount, code); return code !== def ? m + ' ' + escapeHtml(code) : m; }
 
 /* ---------- Temas ---------- */
 const THEMES = [
